@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=sonatina
+Icon=sonatina
+StartupNotify=true
+Exec=@bindir@/sonatina
