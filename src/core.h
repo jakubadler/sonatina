@@ -1,6 +1,8 @@
 #ifndef CORE_H
 #define CORE_H
 
+#include <glib.h>
+
 #include "settings.h"
 
 struct sonatina_instance {
@@ -10,13 +12,14 @@ struct sonatina_instance {
 
 	GtkBuilder *gui;
 	GKeyFile *rc;
+	GList *profiles;
 };
 
 extern struct sonatina_instance sonatina;
 
 void sonatina_init();
-void sonatina_connect(const char *host, int port);
+gboolean sonatina_connect(const char *host, int port);
 
-void sonatina_change_art(const char *path);
+gboolean sonatina_change_profile(const char *name);
 
 #endif
