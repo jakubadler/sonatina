@@ -6,11 +6,6 @@
 #include "gui.h"
 #include "client.h"
 
-void print_help(const char *name)
-{
-	printf("Usage: %s [-H HOST] [-p PORT]\n", name);
-}
-
 int main(int argc, char **argv)
 {
 	GtkApplication *app;

@@ -6,11 +6,10 @@
 struct sonatina_instance {
 	GSource *mpdsource;
 
-	struct sonatina_settings settings;
 	struct mpd_song *current_song;
 
 	GtkBuilder *gui;
-
+	GKeyFile *rc;
 };
 
 extern struct sonatina_instance sonatina;

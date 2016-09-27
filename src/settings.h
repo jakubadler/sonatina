@@ -10,7 +10,7 @@ struct sonatina_settings {
 	int art_size;
 };
 
-gboolean sonatina_settings_load(struct sonatina_settings *settings, const char *path);
+gboolean sonatina_settings_load();
 void sonatina_settings_default(struct sonatina_settings *s);
 gboolean sonatina_settings_apply();
 
