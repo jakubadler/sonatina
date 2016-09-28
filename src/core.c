@@ -2,6 +2,7 @@
 
 #include "core.h"
 #include "client.h"
+#include "util.h"
 
 #define DEFAULT_ALBUM_ART SHAREDIR "/album_art.svg"
 
@@ -68,7 +69,7 @@ gboolean sonatina_change_profile(const char *new)
 	g_assert(name != NULL);
 	g_assert(host != NULL);
 
-	printf("changing profile to %s\n", name);
+	MSG_INFO("changing profile to %s", name);
 	if (sonatina_connect(host, port)) {
 		g_key_file_set_string(sonatina.rc, "main", "active_profile", name);
 		g_free(name);

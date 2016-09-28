@@ -1,7 +1,7 @@
 include ../config.mk
 
-SRC=	main.c core.c settings.c gui.c client.c
-HEAD=	       core.h settings.h gui.h client.h
+SRC=	main.c core.c settings.c gui.c client.c util.c
+HEAD=	       core.h settings.h gui.h client.h util.h
 OBJ=	${SRC:.c=.o}
 BIN=	${PROG}
 

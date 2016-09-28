@@ -4,10 +4,7 @@
 #include "gui.h"
 #include "client.h"
 #include "core.h"
-
-#include <mpd/client.h>
-#include <mpd/async.h>
-
+#include "util.h"
 
 void app_activate_cb(GtkApplication *app, gpointer user_data)
 {

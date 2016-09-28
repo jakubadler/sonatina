@@ -14,6 +14,7 @@
 
 #include "client.h"
 #include "core.h"
+#include "util.h"
 
 struct mpd_parser *parser = NULL;
 
@@ -44,7 +45,7 @@ gboolean mpd_recv(struct mpd_source *source)
 
 	mpd_async_io(source->async, MPD_ASYNC_EVENT_READ);
 	line = mpd_async_recv_line(source->async);
-	printf("mpd recv: %s\n", line);
+	MSG_DEBUG("msg recv: %s", line);
 	if (!line) {
 		puts("null line");
 		return FALSE;
@@ -53,7 +54,7 @@ gboolean mpd_recv(struct mpd_source *source)
 	if (!parser) {
 		parser = mpd_parser_new();
 		if (!parser) {
-			fprintf(stderr, "Couldn't allocate parser\n");
+			MSG_ERROR("Couldn't allocate MPD parser");
 			return FALSE;
 		}
 	}
@@ -105,7 +106,7 @@ void mpd_send(const char *cmd, ...)
 	struct mpd_source *source = (struct mpd_source *) sonatina.mpdsource;
 
 	if (!source) {
-		fprintf(stderr, "not connected\n");
+		MSG_ERROR("not connected");
 		return;
 	}
 
@@ -134,7 +135,7 @@ int client_connect(const char *host, int port)
 
 	retval = getaddrinfo(host, service, &hints, &addr) != 0;
 	if (retval != 0) {
-		fprintf(stderr, "Name resolution failed: %s\n", gai_strerror(retval));
+		MSG_ERROR("Name resolution failed: %s", gai_strerror(retval));
 		return -1;
 	}
 

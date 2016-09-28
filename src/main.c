@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <gtk/gtk.h>
 
+#include "util.h"
 #include "gui.h"
 #include "client.h"
 
