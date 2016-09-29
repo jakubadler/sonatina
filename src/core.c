@@ -29,7 +29,7 @@ gboolean sonatina_connect(const char *host, int port)
 
 	mpdfd = client_connect(host, port);
 	if (mpdfd < 0) {
-		fputs("failed to connect", stderr);
+		MSG_ERROR("failed to connect to %s:%d", host, port);
 		return FALSE;
 	}
 

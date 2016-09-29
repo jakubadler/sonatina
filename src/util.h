@@ -9,6 +9,8 @@ enum {
 	LEVEL_FATAL
 };
 
+extern int log_level;
+
 int printmsg(int level, const char *format, ...);
 
 #ifdef DEBUG

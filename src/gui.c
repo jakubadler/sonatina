@@ -23,27 +23,40 @@ void app_activate_cb(GtkApplication *app, gpointer user_data)
 	sonatina_connect("localhost", 6600);
 }
 
+gint app_options_cb(GApplication *app, GVariantDict *dict, gpointer user_data)
+{
+	GVariant *value;
+
+	value = g_variant_dict_lookup_value(dict, "verbose", NULL);
+
+	if (value) {
+		log_level = LEVEL_INFO;
+	}
+
+	return -1;
+}
+
 void prev_cb(GtkWidget *w, gpointer data)
 {
-	puts("prev_cb");
+	MSG_DEBUG("prev_cb");
 	mpd_send("previous", NULL);
 }
 
 void next_cb(GtkWidget *w, gpointer data)
 {
-	puts("next_cb");
+	MSG_DEBUG("next_cb");
 	mpd_send("next", NULL);
 }
 
 void play_cb(GtkWidget *w, gpointer data)
 {
-	puts("play_cb");
+	MSG_DEBUG("play_cb");
 	mpd_send("play", NULL);
 }
 
 void stop_cb(GtkWidget *w, gpointer data)
 {
-	puts("stop_cb");
+	MSG_DEBUG("stop_cb");
 	mpd_send("stop", NULL);
 }
 
@@ -52,7 +65,7 @@ void volume_cb(GtkWidget *w, gpointer data)
 	gdouble scale;
 	char buf[16];
 
-	puts("volume_cb");
+	MSG_DEBUG("volume_cb");
 	scale = gtk_scale_button_get_value(GTK_SCALE_BUTTON(w));
 	sprintf(buf, "%d", (int) (scale * 100.0));
 	mpd_send("setvol", buf, NULL);

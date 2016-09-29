@@ -47,7 +47,7 @@ gboolean mpd_recv(struct mpd_source *source)
 	line = mpd_async_recv_line(source->async);
 	MSG_DEBUG("msg recv: %s", line);
 	if (!line) {
-		puts("null line");
+		MSG_DEBUG("null line");
 		return FALSE;
 	}
 
@@ -62,16 +62,16 @@ gboolean mpd_recv(struct mpd_source *source)
 	status = mpd_parser_feed(parser, line);
 	switch (status) {
 	case MPD_PARSER_MALFORMED:
-		puts("malformed");
+		MSG_DEBUG("malformed");
 		break;
 	case MPD_PARSER_SUCCESS:
-		puts("OK");
+		MSG_DEBUG("OK");
 		break;
 	case MPD_PARSER_ERROR:
-		puts("error");
+		MSG_DEBUG("error");
 		break;
 	case MPD_PARSER_PAIR:
-		puts("pair");
+		MSG_DEBUG("pair");
 		break;
 	}
 
@@ -87,7 +87,7 @@ gboolean mpd_dispatch(GSource *source, GSourceFunc callback, gpointer data)
 	events = g_source_query_unix_fd(source, mpdsource->fd);
 
 	if (events & G_IO_HUP) {
-		puts("connection closed");
+		MSG_DEBUG("connection closed");
 		retval = retval && FALSE;
 	}
 	if (events & G_IO_IN) {

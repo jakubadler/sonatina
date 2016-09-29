@@ -11,15 +11,36 @@ int log_level = LEVEL_WARNING;
 
 int printmsg(int level, const char *format, ...)
 {
+	FILE *out;
 	va_list ap;
+
+	out = stderr;
 
 	if (level < log_level) {
 		return 0;
 	}
 
 	va_start(ap, format);
-	vfprintf(stderr, format, ap);
-	fprintf(stderr, "\n");
+	switch (level) {
+	case LEVEL_DEBUG:
+		fprintf(out, "DEBUG: ");
+		break;
+	case LEVEL_INFO:
+		fprintf(out, "INFO: ");
+		break;
+	case LEVEL_WARNING:
+		fprintf(out, "WARNING: ");
+		break;
+	case LEVEL_ERROR:
+		fprintf(out, "ERROR: ");
+		break;
+	case LEVEL_FATAL:
+	default:
+		fprintf(out, "FATAL: ");
+		break;
+	}
+	vfprintf(out, format, ap);
+	fprintf(out, "\n");
 	va_end(ap);
 
 	return 0;
