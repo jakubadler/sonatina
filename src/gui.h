@@ -3,6 +3,8 @@
 
 #include <gtk/gtk.h>
 
+void app_startup_cb(GtkApplication *app, gpointer user_data);
+void app_shutdown_cb(GtkApplication *app, gpointer user_data);
 void app_activate_cb(GtkApplication *app, gpointer user_data);
 gint app_options_cb(GApplication *app, GVariantDict *dict, gpointer user_data);
 

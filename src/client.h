@@ -15,6 +15,7 @@ struct mpd_source {
 
 int client_connect(const char *host, int port);
 GSource *mpd_source_new(int fd);
+void mpd_source_close(GSource *source);
 
 extern GSourceFuncs mpdsourcefuncs;
 

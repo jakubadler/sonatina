@@ -19,6 +19,7 @@ extern struct sonatina_instance sonatina;
 
 void sonatina_init();
 gboolean sonatina_connect(const char *host, int port);
+void sonatina_disconnect();
 
 gboolean sonatina_change_profile(const char *name);
 

@@ -42,7 +42,14 @@ gboolean sonatina_connect(const char *host, int port)
 
 void sonatina_disconnect()
 {
+	MSG_DEBUG("sonatina_disconnect()");
+
+	if (!sonatina.mpdsource) {
+		MSG_WARNING("sonatina_disconnect(): not connected");
+		return;
+	}
 	mpd_send("close", NULL);
+	mpd_source_close(sonatina.mpdsource);
 }
 
 gboolean sonatina_change_profile(const char *new)

@@ -140,12 +140,14 @@ int client_connect(const char *host, int port)
 	}
 
 
+	fd = socket(addr->ai_family, SOCK_STREAM, 0);
 	for (; addr; addr = addr->ai_next) {
-		fd = socket(addr->ai_family, SOCK_STREAM, 0);
 		if (connect(fd, addr->ai_addr, addr->ai_addrlen) == 0) {
 			return fd;
 		}
 	}
+
+	close(fd);
 
 	return -1;
 }
@@ -160,5 +162,15 @@ GSource *mpd_source_new(int fd)
 	g_source_set_priority(source, G_PRIORITY_DEFAULT_IDLE);
 
 	return source;
+}
+
+void mpd_source_close(GSource *source)
+{
+	struct mpd_source *mpdsource = (struct mpd_source *) source;
+
+	close(mpd_async_get_fd(mpdsource->async));
+	mpd_async_free(mpdsource->async);
+	g_source_destroy(source);
+	g_source_unref(source);
 }
 
