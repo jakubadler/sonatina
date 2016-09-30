@@ -43,13 +43,36 @@ void app_activate_cb(GtkApplication *app, gpointer user_data)
 	gtk_widget_show_all(GTK_WIDGET(win));
 }
 
-gint app_options_cb(GApplication *app, GVariantDict *dict, gpointer user_data)
+gint app_options_cb(GApplication *app, GApplicationCommandLine *cmdline, gpointer user_data)
+{
+	GVariantDict *dict;
+	GVariant *value;
+	gchar *str;
+
+	dict = g_application_command_line_get_options_dict(cmdline);
+
+	value = g_variant_dict_lookup_value(dict, "kill", NULL);
+	if (value) {
+		MSG_DEBUG("--kill");
+		g_application_quit(app);
+	}
+
+	if (g_variant_dict_lookup(dict, "profile", "s", &str)) {
+		MSG_DEBUG("--profile %s", str);
+		sonatina_change_profile(str);
+		g_free(str);
+	}
+
+	return 0;
+}
+
+gint app_local_options_cb(GApplication *app, GVariantDict *dict, gpointer user_data)
 {
 	GVariant *value;
 
 	value = g_variant_dict_lookup_value(dict, "verbose", NULL);
-
 	if (value) {
+		MSG_DEBUG("--verbose");
 		log_level = LEVEL_INFO;
 	}
 

@@ -12,12 +12,16 @@ void sonatina_init()
 {
 	gchar *str;
 
+	MSG_DEBUG("sonatina_init()");
+
 	sonatina.mpdsource = NULL;
 	sonatina_settings_load(&sonatina);
 
 	str = g_key_file_get_string(sonatina.rc, "main", "active_profile", NULL);
 	if (str) {
-		sonatina_change_profile(str);
+		if (!sonatina_change_profile(str)) {
+			MSG_WARNING("invalid profile %s", str);
+		}
 		g_free(str);
 	}
 }
