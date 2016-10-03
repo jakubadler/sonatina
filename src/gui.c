@@ -63,6 +63,8 @@ gint app_options_cb(GApplication *app, GApplicationCommandLine *cmdline, gpointe
 		g_free(str);
 	}
 
+	g_application_activate(app);
+
 	return 0;
 }
 
