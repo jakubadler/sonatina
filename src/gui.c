@@ -4,14 +4,13 @@
 #include "gui.h"
 #include "client.h"
 #include "core.h"
+#include "util.h"
 
-#include <mpd/client.h>
-#include <mpd/async.h>
-
-
-void app_activate_cb(GtkApplication *app, gpointer user_data)
+void app_startup_cb(GtkApplication *app, gpointer user_data)
 {
 	GObject *win;
+
+	MSG_DEBUG("app_startup_cb()");
 
 	sonatina_init();
 
@@ -19,34 +18,90 @@ void app_activate_cb(GtkApplication *app, gpointer user_data)
 	gtk_builder_add_from_file(sonatina.gui, SHAREDIR "/" PROG ".ui", NULL);
 
 	win = gtk_builder_get_object(sonatina.gui, "window");
+	g_signal_connect(win, "delete-event", G_CALLBACK(gtk_widget_hide_on_delete), NULL);
 	gtk_application_add_window(app, GTK_WINDOW(win));
-	gtk_widget_show_all(GTK_WIDGET(win));
 
 	connect_signals();
-	sonatina_connect("localhost", 6600);
+
+	/* keep application running after main window is closed */
+	g_application_hold(G_APPLICATION(app));
+}
+
+void app_shutdown_cb(GtkApplication *app, gpointer user_data)
+{
+	MSG_DEBUG("app_shutdown_cb()");
+	sonatina_disconnect();
+}
+
+void app_activate_cb(GtkApplication *app, gpointer user_data)
+{
+	GObject *win;
+
+	MSG_DEBUG("app_activate_cb()");
+
+	win = gtk_builder_get_object(sonatina.gui, "window");
+	gtk_widget_show_all(GTK_WIDGET(win));
+}
+
+gint app_options_cb(GApplication *app, GApplicationCommandLine *cmdline, gpointer user_data)
+{
+	GVariantDict *dict;
+	GVariant *value;
+	gchar *str;
+
+	dict = g_application_command_line_get_options_dict(cmdline);
+
+	value = g_variant_dict_lookup_value(dict, "kill", NULL);
+	if (value) {
+		MSG_DEBUG("--kill");
+		g_application_quit(app);
+	}
+
+	if (g_variant_dict_lookup(dict, "profile", "s", &str)) {
+		MSG_DEBUG("--profile %s", str);
+		sonatina_change_profile(str);
+		g_free(str);
+	}
+
+	g_application_activate(app);
+
+	return 0;
+}
+
+gint app_local_options_cb(GApplication *app, GVariantDict *dict, gpointer user_data)
+{
+	GVariant *value;
+
+	value = g_variant_dict_lookup_value(dict, "verbose", NULL);
+	if (value) {
+		MSG_DEBUG("--verbose");
+		log_level = LEVEL_INFO;
+	}
+
+	return -1;
 }
 
 void prev_cb(GtkWidget *w, gpointer data)
 {
-	puts("prev_cb");
+	MSG_DEBUG("prev_cb");
 	mpd_send("previous", NULL);
 }
 
 void next_cb(GtkWidget *w, gpointer data)
 {
-	puts("next_cb");
+	MSG_DEBUG("next_cb");
 	mpd_send("next", NULL);
 }
 
 void play_cb(GtkWidget *w, gpointer data)
 {
-	puts("play_cb");
+	MSG_DEBUG("play_cb");
 	mpd_send("play", NULL);
 }
 
 void stop_cb(GtkWidget *w, gpointer data)
 {
-	puts("stop_cb");
+	MSG_DEBUG("stop_cb");
 	mpd_send("stop", NULL);
 }
 
@@ -55,7 +110,7 @@ void volume_cb(GtkWidget *w, gpointer data)
 	gdouble scale;
 	char buf[16];
 
-	puts("volume_cb");
+	MSG_DEBUG("volume_cb");
 	scale = gtk_scale_button_get_value(GTK_SCALE_BUTTON(w));
 	sprintf(buf, "%d", (int) (scale * 100.0));
 	mpd_send("setvol", buf, NULL);

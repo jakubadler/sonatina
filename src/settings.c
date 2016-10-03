@@ -4,8 +4,10 @@
 
 #include <glib.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
+
 #include "settings.h"
 #include "core.h"
+#include "util.h"
 
 gchar *rcdir;
 gchar *rcfile;
@@ -49,7 +51,7 @@ gboolean sonatina_settings_load()
 	profiles = g_key_file_get_string_list(sonatina.rc, "main", "profiles", &nprofiles, NULL);
 
 	if (!profiles) {
-		printf("no profiles set; adding default\n");
+		MSG_INFO("no profiles set; adding default");
 		sonatina_add_profile("localhost", "localhost", 6600);
 		profiles = g_key_file_get_string_list(sonatina.rc, "main", "profiles", &nprofiles, NULL);
 	}
@@ -58,7 +60,7 @@ gboolean sonatina_settings_load()
 
 	for (i = 0; i < nprofiles; i++) {
 		path = g_build_filename(profiledir, profiles[i], NULL);
-		printf("loading profile '%s'\n", path);
+		MSG_INFO("loading profile '%s'", path);
 		profile = g_key_file_new();
 		g_key_file_load_from_file(profile, path,
 		                          G_KEY_FILE_KEEP_COMMENTS |
