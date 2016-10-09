@@ -55,7 +55,7 @@ void sonatina_disconnect()
 		MSG_WARNING("sonatina_disconnect(): not connected");
 		return;
 	}
-	mpd_send("close", NULL);
+	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_CLOSE, NULL);
 	mpd_source_close(sonatina.mpdsource);
 	sonatina.mpdsource = NULL;
 }

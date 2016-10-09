@@ -84,25 +84,31 @@ gint app_local_options_cb(GApplication *app, GVariantDict *dict, gpointer user_d
 void prev_cb(GtkWidget *w, gpointer data)
 {
 	MSG_DEBUG("prev_cb");
-	mpd_send("previous", NULL);
+	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PREV, NULL);
 }
 
 void next_cb(GtkWidget *w, gpointer data)
 {
 	MSG_DEBUG("next_cb");
-	mpd_send("next", NULL);
+	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_NEXT, NULL);
 }
 
 void play_cb(GtkWidget *w, gpointer data)
 {
 	MSG_DEBUG("play_cb");
-	mpd_send("play", NULL);
+	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PLAY, NULL);
+}
+
+void pause_cb(GtkWidget *w, gpointer data)
+{
+	MSG_DEBUG("pause_cb");
+	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PAUSE, NULL);
 }
 
 void stop_cb(GtkWidget *w, gpointer data)
 {
 	MSG_DEBUG("stop_cb");
-	mpd_send("stop", NULL);
+	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_STOP, NULL);
 }
 
 void volume_cb(GtkWidget *w, gpointer data)
@@ -113,7 +119,7 @@ void volume_cb(GtkWidget *w, gpointer data)
 	MSG_DEBUG("volume_cb");
 	scale = gtk_scale_button_get_value(GTK_SCALE_BUTTON(w));
 	sprintf(buf, "%d", (int) (scale * 100.0));
-	mpd_send("setvol", buf, NULL);
+	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_SETVOL, buf, NULL);
 }
 
 void connect_signals()
@@ -125,6 +131,8 @@ void connect_signals()
 	g_signal_connect(w, "clicked", G_CALLBACK(prev_cb), NULL);
 	w = gtk_builder_get_object(sonatina.gui, "play_button");
 	g_signal_connect(w, "clicked", G_CALLBACK(play_cb), NULL);
+	w = gtk_builder_get_object(sonatina.gui, "pause_button");
+	g_signal_connect(w, "clicked", G_CALLBACK(pause_cb), NULL);
 	w = gtk_builder_get_object(sonatina.gui, "stop_button");
 	g_signal_connect(w, "clicked", G_CALLBACK(stop_cb), NULL);
 	w = gtk_builder_get_object(sonatina.gui, "next_button");
