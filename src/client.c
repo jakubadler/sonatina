@@ -72,7 +72,19 @@ struct mpd_cmd *mpd_cmd_new(enum mpd_cmd_type type)
 
 	cmd = g_malloc(sizeof(struct mpd_cmd));
 	cmd->type = type;
-	cmd->answer.ptr = NULL;
+
+	switch (type) {
+	case MPD_CMD_CURRENTSONG:
+	case MPD_CMD_STATUS:
+	case MPD_CMD_STATS:
+		cmd->answer.ptr = NULL;
+		break;
+	case MPD_CMD_IDLE:
+		cmd->answer.idle = 0;
+		break;
+	default:
+		break;
+	}
 
 	return cmd;
 }
@@ -101,6 +113,15 @@ void mpd_cmd_free(struct mpd_cmd *cmd)
 	g_free(cmd);
 }
 
+void mpd_idle_update(int flags)
+{
+	if (flags & MPD_CHANGED_PLAYER ||
+	    flags & MPD_CHANGED_MIXER ||
+	    flags & MPD_CHANGED_OPTIONS ) {
+		mpd_send_cmd(sonatina.mpdsource, MPD_CMD_STATUS, NULL);
+	}
+}
+
 void mpd_cmd_process_answer(struct mpd_cmd *cmd)
 {
 	if (!cmd) {
@@ -113,6 +134,9 @@ void mpd_cmd_process_answer(struct mpd_cmd *cmd)
 		break;
 	case MPD_CMD_CURRENTSONG:
 		sonatina_update_song(cmd->answer.song);
+		break;
+	case MPD_CMD_IDLE:
+		mpd_idle_update(cmd->answer.idle);
 		break;
 	default:
 		break;
@@ -219,6 +243,29 @@ gboolean mpd_parse_pair(const struct mpd_pair *pair, struct mpd_cmd *cmd)
 	case MPD_CMD_IDLE:
 		if (strcmp(pair->name, "changed")) {
 			break;
+		}
+		if (!strcmp("database", pair->value)) {
+			cmd->answer.idle |= MPD_CHANGED_DB;
+		} else if (!strcmp("update", pair->value)) {
+			cmd->answer.idle |= MPD_CHANGED_UPDATE;
+		} else if (!strcmp("stored_playlist", pair->value)) {
+			cmd->answer.idle |= MPD_CHANGED_STORED_PL;
+		} else if (!strcmp("playlist", pair->value)) {
+			cmd->answer.idle |= MPD_CHANGED_PL;
+		} else if (!strcmp("player", pair->value)) {
+			cmd->answer.idle |= MPD_CHANGED_PLAYER;
+		} else if (!strcmp("mixer", pair->value)) {
+			cmd->answer.idle |= MPD_CHANGED_MIXER;
+		} else if (!strcmp("output", pair->value)) {
+			cmd->answer.idle |= MPD_CHANGED_OUTPUT;
+		} else if (!strcmp("options", pair->value)) {
+			cmd->answer.idle |= MPD_CHANGED_OPTIONS;
+		} else if (!strcmp("sticker", pair->value)) {
+			cmd->answer.idle |= MPD_CHANGED_STICKER;
+		} else if (!strcmp("subscription", pair->value)) {
+			cmd->answer.idle |= MPD_CHANGED_SUBSCR;
+		} else if (!strcmp("message", pair->value)) {
+			cmd->answer.idle |= MPD_CHANGED_MESSAGE;
 		}
 		MSG_DEBUG("changed: %s", pair->value);
 		break;
