@@ -1,8 +1,14 @@
+#include <string.h>
+
+#include <glib.h>
 #include <gtk/gtk.h>
+
+#include <mpd/client.h>
 
 #include "core.h"
 #include "client.h"
 #include "util.h"
+#include "songattr.h"
 
 #define DEFAULT_ALBUM_ART SHAREDIR "/album_art.svg"
 
@@ -43,6 +49,7 @@ gboolean sonatina_connect(const char *host, int port)
 
 	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_STATUS, NULL);
 	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_CURRENTSONG, NULL);
+	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PLINFO, NULL);
 
 	return TRUE;
 }
@@ -92,9 +99,6 @@ gboolean sonatina_change_profile(const char *new)
 		g_free(host);
 	}
 
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_STATUS, NULL);
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_CURRENTSONG, NULL);
-
 	return TRUE;
 }
 
@@ -130,9 +134,9 @@ void sonatina_update_status(const struct mpd_status *status)
 	if (vol >= 0) {
 		gtk_widget_set_sensitive(GTK_WIDGET(w), TRUE);
 		gtk_scale_button_set_value(GTK_SCALE_BUTTON(w), vol/100.0);
-	}/* else {
+	} else {
 		gtk_widget_set_sensitive(GTK_WIDGET(w), FALSE);
-	}*/
+	}
 
 	/* state */
 	/* TODO: this is not an optimal solution as the butons blink while changing */
@@ -153,5 +157,88 @@ void sonatina_update_status(const struct mpd_status *status)
 		gtk_widget_show(GTK_WIDGET(pause));
 		break;
 	}
+}
+
+void sonatina_update_pl(const struct mpd_song *song)
+{
+	pl_update(&sonatina.pl, song);
+}
+
+void sonatina_clear_pl()
+{
+	gtk_list_store_clear(sonatina.pl.store);
+}
+
+gboolean pl_init(struct playlist *pl, const char *format)
+{
+	size_t i;
+	GType *types;
+	GObject *tw;
+	GtkCellRenderer *renderer;
+	GtkTreeViewColumn *col;
+	gchar *title;
+
+	pl->n_columns = 1;
+	for (i = 0; format[i]; i++) {
+		if (format[i] == '|')
+			pl->n_columns++;
+	}
+
+	pl->columns = g_strsplit(format, "|", 0);
+	types = g_malloc(pl->n_columns * sizeof(GType));
+
+	for (i = 0; pl->columns[i]; i++) {
+		types[i] = G_TYPE_STRING;
+	}
+	pl->store = gtk_list_store_newv(pl->n_columns, types);
+	g_free(types);
+
+	/* update TreeView */
+	tw = gtk_builder_get_object(sonatina.gui, "playlist_tw");
+
+	renderer = gtk_cell_renderer_text_new();
+
+	/* remove all columns */
+	for (i = 0; (col = gtk_tree_view_get_column(GTK_TREE_VIEW(tw), i)); i++) {
+		gtk_tree_view_remove_column(GTK_TREE_VIEW(tw), col);
+	}
+
+	/* add new columns */
+	for (i = 0; pl->columns[i]; i++) {
+		title = song_attr_format(pl->columns[i], NULL);
+		MSG_DEBUG("adding column with format '%s' to playlist tw", pl->columns[i]);
+		col = gtk_tree_view_column_new_with_attributes(title, renderer, "text", i, NULL);
+		gtk_tree_view_append_column(GTK_TREE_VIEW(tw), col);
+	}
+
+	return TRUE;
+}
+
+void pl_update(struct playlist *pl, const struct mpd_song *song)
+{
+	int pos;
+	GtkTreePath *path;
+	GtkTreeIter iter;
+	size_t i;
+	gchar *str;
+
+	pos = mpd_song_get_pos(song);
+	path = gtk_tree_path_new_from_indices(pos, -1);
+	if (!gtk_tree_model_get_iter(GTK_TREE_MODEL(pl->store), &iter, path)) {
+		gtk_list_store_insert(pl->store, &iter, pos);
+	}
+	gtk_tree_path_free(path);
+
+	for (i = 0; i < pl->n_columns; i++) {
+		str = song_attr_format(pl->columns[i], song);
+		gtk_list_store_set(pl->store, &iter, i, str, -1);
+		g_free(str);
+	}
+}
+
+void pl_free(struct playlist *pl)
+{
+	g_strfreev(pl->columns);
+	gtk_list_store_clear(pl->store);
 }
 

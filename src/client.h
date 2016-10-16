@@ -16,6 +16,7 @@ enum mpd_cmd_type {
 	MPD_CMD_PREV,
 	MPD_CMD_NEXT,
 	MPD_CMD_SETVOL,
+	MPD_CMD_PLINFO,
 	MPD_CMD_CLOSE
 };
 
@@ -29,7 +30,7 @@ struct mpd_source {
 
 union mpd_cmd_answer {
 	void *ptr;
-	struct mpd_song *song; /* MPD_CMD_CURRENTSONG */
+	struct mpd_song *song; /* MPD_CMD_CURRENTSONG, MPD_CMD_PLINFO */
 	struct mpd_status *status; /* MPD_CMD_STATUS */
 	struct mpd_stats *stats; /* MPD_CMD_STATS */
 	int idle; /* MPD_CMD_IDLE */

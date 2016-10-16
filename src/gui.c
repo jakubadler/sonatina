@@ -9,6 +9,8 @@
 void app_startup_cb(GtkApplication *app, gpointer user_data)
 {
 	GObject *win;
+	GObject *w;
+	gchar *str;
 
 	MSG_DEBUG("app_startup_cb()");
 
@@ -20,6 +22,14 @@ void app_startup_cb(GtkApplication *app, gpointer user_data)
 	win = gtk_builder_get_object(sonatina.gui, "window");
 	g_signal_connect(win, "delete-event", G_CALLBACK(gtk_widget_hide_on_delete), NULL);
 	gtk_application_add_window(app, GTK_WINDOW(win));
+
+	/* playlist TreeView */
+	str = g_key_file_get_string(sonatina.rc, "playlist", "format", NULL);
+	pl_init(&sonatina.pl, str);
+	g_free(str);
+
+	w = gtk_builder_get_object(sonatina.gui, "playlist_tw");
+	gtk_tree_view_set_model(GTK_TREE_VIEW(w), GTK_TREE_MODEL(sonatina.pl.store));
 
 	connect_signals();
 

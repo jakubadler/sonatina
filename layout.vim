@@ -12,6 +12,9 @@ split src/gui.h
 tabnew src/client.c
 split src/client.h
 
+tabnew src/songattr.c
+split src/songattr.h
+
 tabnew src/util.c
 split src/util.h
 

@@ -61,6 +61,8 @@ const char *mpd_cmd_to_str(enum mpd_cmd_type cmd)
 		return "next";
 	case MPD_CMD_SETVOL:
 		return "setvol";
+	case MPD_CMD_PLINFO:
+		return "playlistinfo";
 	default:
 		return NULL;
 	}
@@ -77,6 +79,7 @@ struct mpd_cmd *mpd_cmd_new(enum mpd_cmd_type type)
 	case MPD_CMD_CURRENTSONG:
 	case MPD_CMD_STATUS:
 	case MPD_CMD_STATS:
+	case MPD_CMD_PLINFO:
 		cmd->answer.ptr = NULL;
 		break;
 	case MPD_CMD_IDLE:
@@ -120,6 +123,9 @@ void mpd_idle_update(int flags)
 	    flags & MPD_CHANGED_OPTIONS ) {
 		mpd_send_cmd(sonatina.mpdsource, MPD_CMD_STATUS, NULL);
 	}
+	if (flags & MPD_CHANGED_PL) {
+		mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PLINFO, NULL);
+	}
 }
 
 void mpd_cmd_process_answer(struct mpd_cmd *cmd)
@@ -130,13 +136,19 @@ void mpd_cmd_process_answer(struct mpd_cmd *cmd)
 
 	switch (cmd->type) {
 	case MPD_CMD_STATUS:
-		sonatina_update_status(cmd->answer.status);
+		if (cmd->answer.status)
+			sonatina_update_status(cmd->answer.status);
 		break;
 	case MPD_CMD_CURRENTSONG:
-		sonatina_update_song(cmd->answer.song);
+		if (cmd->answer.song)
+			sonatina_update_song(cmd->answer.song);
 		break;
 	case MPD_CMD_IDLE:
 		mpd_idle_update(cmd->answer.idle);
+		break;
+	case MPD_CMD_PLINFO:
+		if (cmd->answer.song)
+			sonatina_update_pl(cmd->answer.song);
 		break;
 	default:
 		break;
@@ -231,13 +243,30 @@ gboolean mpd_parse_pair(const struct mpd_pair *pair, struct mpd_cmd *cmd)
 		mpd_status_feed(cmd->answer.status, pair);
 		break;
 	case MPD_CMD_CURRENTSONG:
-		if (!(cmd->answer.song)) {
+		if (cmd->answer.song) {
+			result = mpd_song_feed(cmd->answer.song, pair);
+		} else {
 			cmd->answer.song = mpd_song_begin(pair);
 			if (!(cmd->answer.song)) {
 				result = FALSE;
 			}
-		} else {
-			result = mpd_song_feed(cmd->answer.song, pair);
+		}
+		break;
+	case MPD_CMD_PLINFO:
+		if (!cmd->answer.song) {
+			/* first pair */
+			cmd->answer.song = mpd_song_begin(pair);
+			if (!cmd->answer.song) {
+				MSG_ERROR("couldn't allocate song");
+				return FALSE;
+			}
+			sonatina_clear_pl();
+		}
+		if (!mpd_song_feed(cmd->answer.song, pair)) {
+			/* beginning of a new song */
+			sonatina_update_pl(cmd->answer.song);
+			mpd_song_free(cmd->answer.song);
+			cmd->answer.song = mpd_song_begin(pair);
 		}
 		break;
 	case MPD_CMD_IDLE:
@@ -269,6 +298,7 @@ gboolean mpd_parse_pair(const struct mpd_pair *pair, struct mpd_cmd *cmd)
 		}
 		MSG_DEBUG("changed: %s", pair->value);
 		break;
+		
 	default:
 		break;
 	}
