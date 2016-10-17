@@ -36,6 +36,33 @@ gboolean mpd_check(GSource *source)
 	return TRUE;
 }
 
+gboolean mpd_dispatch(GSource *source, GSourceFunc callback, gpointer data)
+{
+	struct mpd_source *mpdsource = (struct mpd_source *) source;
+	GIOCondition events;
+	gboolean retval = TRUE;
+
+	events = g_source_query_unix_fd(source, mpdsource->fd);
+
+	if (events & G_IO_HUP) {
+		MSG_DEBUG("connection closed");
+		retval = FALSE;
+	}
+	if (events & G_IO_IN) {
+		retval = retval && mpd_async_io(mpdsource->async, MPD_ASYNC_EVENT_READ);
+		while (mpd_recv(mpdsource)) {};
+	}
+	if (events & G_IO_OUT) {
+		retval = retval && mpd_async_io(mpdsource->async, MPD_ASYNC_EVENT_WRITE);
+	}
+
+	if (!retval) {
+		MSG_DEBUG("mpd_dispatch(): closing connection");
+	}
+
+	return retval;
+}
+
 const char *mpd_cmd_to_str(enum mpd_cmd_type cmd)
 {
 	switch (cmd) {
@@ -155,12 +182,6 @@ void mpd_cmd_process_answer(struct mpd_cmd *cmd)
 	}
 }
 
-/**
-  @brief Receive one MPD response (i.e. ending with OK or ACK line) from
-  mpd source and do according actions.
-  @param source MPD source
-  @returns TRUE if a response was received successfully, FALSE otherwise.
-  */
 gboolean mpd_recv(struct mpd_source *source)
 {
 	char *line;
@@ -306,37 +327,6 @@ gboolean mpd_parse_pair(const struct mpd_pair *pair, struct mpd_cmd *cmd)
 	return result;
 }
 
-gboolean mpd_dispatch(GSource *source, GSourceFunc callback, gpointer data)
-{
-	struct mpd_source *mpdsource = (struct mpd_source *) source;
-	GIOCondition events;
-	gboolean retval = TRUE;
-
-	events = g_source_query_unix_fd(source, mpdsource->fd);
-
-	if (events & G_IO_HUP) {
-		MSG_DEBUG("connection closed");
-		retval = FALSE;
-	}
-	if (events & G_IO_IN) {
-		retval = retval && mpd_async_io(mpdsource->async, MPD_ASYNC_EVENT_READ);
-		while (mpd_recv(mpdsource)) {};
-	}
-	if (events & G_IO_OUT) {
-		retval = retval && mpd_async_io(mpdsource->async, MPD_ASYNC_EVENT_WRITE);
-	}
-
-	if (!retval) {
-		MSG_DEBUG("mpd_dispatch(): closing connection");
-	}
-
-	return retval;
-}
-
-/**
-  @param ... List of arguments to command terminated with NULL.
-  @return TRUE when command was sent, FALSE otherwise.
-  */
 gboolean mpd_send_cmd(GSource *source, enum mpd_cmd_type type, ...)
 {
 	va_list ap;
@@ -378,9 +368,6 @@ gboolean mpd_send_cmd(GSource *source, enum mpd_cmd_type type, ...)
 	return retval;
 }
 
-/**
-  @returns File descriptor of TCP connection to server.
-  */
 int client_connect(const char *host, int port)
 {
 	struct addrinfo hints;

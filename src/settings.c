@@ -3,7 +3,6 @@
 #include <errno.h>
 
 #include <glib.h>
-#include <gdk-pixbuf/gdk-pixbuf.h>
 
 #include "settings.h"
 #include "core.h"
@@ -29,7 +28,6 @@ void sonatina_settings_prepare()
 
 	g_mkdir_with_parents(profiledir, 0744);
 }
-
 
 gboolean sonatina_settings_load()
 {

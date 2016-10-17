@@ -104,7 +104,6 @@ const char *get_song_attr_name(int attr)
 	return NULL;
 }
 
-
 gchar *song_attr_format(const char *format, const struct mpd_song *song)
 {
 	GString *buf;
