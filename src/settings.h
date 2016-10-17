@@ -15,6 +15,11 @@
 gboolean sonatina_settings_load();
 
 /**
+  @brief Save runtime settings to files.
+  */
+void sonatina_settings_save();
+
+/**
   @brief Create new connection profile.
   @param name Name of the new profile.
   @param host Hostname.

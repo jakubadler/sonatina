@@ -32,6 +32,28 @@ void sonatina_init()
 	}
 }
 
+void sonatina_destroy()
+{
+	GList *cur;
+	GObject *w;
+
+	MSG_DEBUG("sonatina_destroy()");
+
+	sonatina_settings_save();
+
+	pl_free(&sonatina.pl);
+	g_key_file_free(sonatina.rc);
+
+	for (cur = sonatina.profiles; cur; cur = cur->next) {
+		g_key_file_free(cur->data);
+	}
+
+	g_list_free(sonatina.profiles);
+
+	w = gtk_builder_get_object(sonatina.gui, "window");
+	gtk_widget_destroy(GTK_WIDGET(w));
+}
+
 gboolean sonatina_connect(const char *host, int port)
 {
 	GMainContext *context;

@@ -132,6 +132,7 @@ void mpd_cmd_free(struct mpd_cmd *cmd)
 		}
 		break;
 	case MPD_CMD_CURRENTSONG:
+	case MPD_CMD_PLINFO:
 		if (cmd->answer.song) {
 			mpd_song_free(cmd->answer.song);
 		}

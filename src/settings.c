@@ -71,6 +71,22 @@ gboolean sonatina_settings_load()
 	return TRUE;
 }
 
+void sonatina_settings_save()
+{
+	GList *cur;
+	gchar *profile;
+
+	g_key_file_save_to_file(sonatina.rc, rcfile, NULL);
+
+	for (cur = sonatina.profiles; cur; cur = cur->next) {
+		profile = g_strdup_printf("%s/%s", profiledir, g_key_file_get_string(cur->data, "profile", "name", NULL));
+		g_key_file_save_to_file(cur->data, profile, NULL);
+		g_free(profile);
+	}
+}
+
+
+
 void sonatina_add_profile(const char *name, const char *host, int port)
 {
 	gchar *path;

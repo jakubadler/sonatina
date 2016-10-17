@@ -30,6 +30,7 @@ struct sonatina_instance {
 extern struct sonatina_instance sonatina;
 
 void sonatina_init();
+void sonatina_destroy();
 
 /**
   @brief Connect sonatina instance to a MPD server.

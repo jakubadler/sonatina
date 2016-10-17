@@ -43,6 +43,7 @@ void app_shutdown_cb(GtkApplication *app, gpointer user_data)
 {
 	MSG_DEBUG("app_shutdown_cb()");
 	sonatina_disconnect();
+	sonatina_destroy();
 }
 
 void app_activate_cb(GtkApplication *app, gpointer user_data)
