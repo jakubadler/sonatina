@@ -247,11 +247,6 @@ gboolean mpd_recv(struct mpd_source *source)
 	return TRUE;
 }
 
-/**
-  @param cmd Type of MPD command which this pair belongs to.
-  @param pair MPD pair to be parsed.
-  @return TRUE if pair is successfully parsed (is valid for given command type).
-  */
 gboolean mpd_parse_pair(const struct mpd_pair *pair, struct mpd_cmd *cmd)
 {
 	gboolean result = TRUE;

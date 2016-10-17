@@ -18,6 +18,6 @@ split src/songattr.h
 tabnew src/util.c
 split src/util.h
 
-tabnew share/sonatina.ui
+tabnew data/sonatina.ui
 
 tabnew config.mk

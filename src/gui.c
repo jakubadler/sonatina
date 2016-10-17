@@ -6,6 +6,8 @@
 #include "core.h"
 #include "util.h"
 
+#define UIFILE DATADIR "/" PROG "/" PROG ".ui"
+
 void app_startup_cb(GtkApplication *app, gpointer user_data)
 {
 	GObject *win;
@@ -17,7 +19,7 @@ void app_startup_cb(GtkApplication *app, gpointer user_data)
 	sonatina_init();
 
 	sonatina.gui = gtk_builder_new();
-	gtk_builder_add_from_file(sonatina.gui, SHAREDIR "/" PROG ".ui", NULL);
+	gtk_builder_add_from_file(sonatina.gui, UIFILE, NULL);
 
 	win = gtk_builder_get_object(sonatina.gui, "window");
 	g_signal_connect(win, "delete-event", G_CALLBACK(gtk_widget_hide_on_delete), NULL);

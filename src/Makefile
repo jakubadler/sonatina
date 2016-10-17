@@ -17,11 +17,11 @@ ${OBJ}: ${HEAD}
 	@${CC} -c ${CFLAGS} $<
 
 install: ${BIN}
-	mkdir -p ${PREFIX}/bin
-	cp -f ${BIN} ${PREFIX}/bin/${BIN}
+	mkdir -p ${BINDIR}
+	cp -f ${BIN} ${BINDIR}/${BIN}
 
 uninstall:
-	rm -f ${PREFIX}/bin/${BIN}
+	rm -f ${BINDIR}/${BIN}
 
 clean:
 	rm -f ${OBJ}
