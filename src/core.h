@@ -25,6 +25,10 @@ struct sonatina_instance {
 	GList *profiles; /** List of GKeyFile objects representing available profiles */
 
 	struct playlist pl;
+
+	int elapsed;
+	int total;
+	GTimer *counter;
 };
 
 extern struct sonatina_instance sonatina;
@@ -95,5 +99,12 @@ void pl_update(struct playlist *pl, const struct mpd_song *song);
   @param pl playlist structure
   */
 void pl_free(struct playlist *pl);
+
+/**
+  @brief Function called every second to check elapsed time and update progressbar.
+  @param data Unused user data.
+  @returns TRUE
+  */
+gboolean counter_cb(gpointer data);
 
 #endif

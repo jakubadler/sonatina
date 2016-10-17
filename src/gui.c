@@ -16,10 +16,10 @@ void app_startup_cb(GtkApplication *app, gpointer user_data)
 
 	MSG_DEBUG("app_startup_cb()");
 
-	sonatina_init();
-
 	sonatina.gui = gtk_builder_new();
 	gtk_builder_add_from_file(sonatina.gui, UIFILE, NULL);
+
+	sonatina_init();
 
 	win = gtk_builder_get_object(sonatina.gui, "window");
 	g_signal_connect(win, "delete-event", G_CALLBACK(gtk_widget_hide_on_delete), NULL);

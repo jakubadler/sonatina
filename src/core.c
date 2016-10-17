@@ -30,6 +30,12 @@ void sonatina_init()
 		}
 		g_free(str);
 	}
+
+	sonatina.elapsed = 0;
+	sonatina.total = 0;
+	sonatina.counter = g_timer_new();
+	g_timer_stop(sonatina.counter);
+	g_timeout_add_seconds(1, counter_cb, NULL);
 }
 
 void sonatina_destroy()
@@ -52,6 +58,8 @@ void sonatina_destroy()
 
 	w = gtk_builder_get_object(sonatina.gui, "window");
 	gtk_widget_destroy(GTK_WIDGET(w));
+
+	g_timer_destroy(sonatina.counter);
 }
 
 gboolean sonatina_connect(const char *host, int port)
@@ -160,6 +168,12 @@ void sonatina_update_status(const struct mpd_status *status)
 		gtk_widget_set_sensitive(GTK_WIDGET(w), FALSE);
 	}
 
+	/* elapsed time */
+	sonatina.elapsed = mpd_status_get_elapsed_time(status);
+	sonatina.total = mpd_status_get_total_time(status);
+	g_timer_start(sonatina.counter);
+	g_timer_stop(sonatina.counter);
+
 	/* state */
 	/* TODO: this is not an optimal solution as the butons blink while changing */
 	GObject *play;
@@ -173,12 +187,15 @@ void sonatina_update_status(const struct mpd_status *status)
 	case MPD_STATE_PAUSE:
 		gtk_widget_hide(GTK_WIDGET(pause));
 		gtk_widget_show(GTK_WIDGET(play));
+		g_timer_stop(sonatina.counter);
 		break;
 	case MPD_STATE_PLAY:
 		gtk_widget_hide(GTK_WIDGET(play));
 		gtk_widget_show(GTK_WIDGET(pause));
+		g_timer_start(sonatina.counter);
 		break;
 	}
+
 }
 
 void sonatina_update_pl(const struct mpd_song *song)
@@ -262,5 +279,28 @@ void pl_free(struct playlist *pl)
 {
 	g_strfreev(pl->columns);
 	gtk_list_store_clear(pl->store);
+}
+
+gboolean counter_cb(gpointer data)
+{
+	GObject *w;
+	gchar *str;
+	gdouble fraction;
+	int elapsed;
+
+	elapsed = sonatina.elapsed + g_timer_elapsed(sonatina.counter, NULL);
+
+	if (sonatina.total <= 0 || elapsed < 0) {
+		fraction = 0.0;
+	} else {
+		fraction = elapsed / ((double) sonatina.total);
+	}
+	w = gtk_builder_get_object(sonatina.gui, "timeline");
+	str = g_strdup_printf("%d:%.2d / %d:%.2d", elapsed/60, elapsed%60, sonatina.total/60, sonatina.total%60);
+	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(w), fraction);
+	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(w), str);
+	g_free(str);
+
+	return TRUE;
 }
 
