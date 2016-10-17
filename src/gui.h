@@ -12,6 +12,7 @@ gint app_local_options_cb(GApplication *app, GVariantDict *dict, gpointer user_d
 void prev_cb(GtkWidget *w, gpointer data);
 void next_cb(GtkWidget *w, gpointer data);
 void play_cb(GtkWidget *w, gpointer data);
+void pause_cb(GtkWidget *w, gpointer data);
 void stop_cb(GtkWidget *w, gpointer data);
 
 void connect_signals();

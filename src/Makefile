@@ -1,7 +1,7 @@
 include ../config.mk
 
-SRC=	main.c core.c settings.c gui.c client.c util.c
-HEAD=	       core.h settings.h gui.h client.h util.h
+SRC=	main.c core.c settings.c gui.c client.c util.c songattr.c
+HEAD=	       core.h settings.h gui.h client.h util.h songattr.h
 OBJ=	${SRC:.c=.o}
 BIN=	${PROG}
 
@@ -17,11 +17,11 @@ ${OBJ}: ${HEAD}
 	@${CC} -c ${CFLAGS} $<
 
 install: ${BIN}
-	mkdir -p ${PREFIX}/bin
-	cp -f ${BIN} ${PREFIX}/bin/${BIN}
+	mkdir -p ${BINDIR}
+	cp -f ${BIN} ${BINDIR}/${BIN}
 
 uninstall:
-	rm -f ${PREFIX}/bin/${BIN}
+	rm -f ${BINDIR}/${BIN}
 
 clean:
 	rm -f ${OBJ}
