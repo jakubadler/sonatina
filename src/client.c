@@ -86,6 +86,8 @@ const char *mpd_cmd_to_str(enum mpd_cmd_type cmd)
 		return "previous";
 	case MPD_CMD_NEXT:
 		return "next";
+	case MPD_CMD_SEEKCUR:
+		return "seekcur";
 	case MPD_CMD_SETVOL:
 		return "setvol";
 	case MPD_CMD_PLINFO:

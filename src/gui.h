@@ -15,6 +15,8 @@ void play_cb(GtkWidget *w, gpointer data);
 void pause_cb(GtkWidget *w, gpointer data);
 void stop_cb(GtkWidget *w, gpointer data);
 
+gboolean timeline_clicked_cb(GtkWidget *w, GdkEvent *event, gpointer data);
+
 void connect_signals();
 
 

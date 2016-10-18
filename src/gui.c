@@ -135,6 +135,25 @@ void volume_cb(GtkWidget *w, gpointer data)
 	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_SETVOL, buf, NULL);
 }
 
+gboolean timeline_clicked_cb(GtkWidget *w, GdkEvent *event, gpointer data)
+{
+	gdouble x;
+	int width, time;
+	char buf[24];
+
+	MSG_DEBUG("timeline_clicked_cb()");
+
+	x = ((GdkEventButton *) event)->x;
+	width = gtk_widget_get_allocated_width(w);
+
+	if (width == 0) time = 0;
+	else time = (x / width) * sonatina.total;
+	snprintf(buf, sizeof(buf) - 1, "%d", time);
+	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_SEEKCUR, buf, NULL);
+
+	return FALSE;
+}
+
 void connect_signals()
 {
 	GObject *w;
@@ -154,5 +173,10 @@ void connect_signals()
 	/* volume button */
 	w = gtk_builder_get_object(sonatina.gui, "volbutton");
 	g_signal_connect(w, "value-changed", G_CALLBACK(volume_cb), NULL);
+
+	/* timeline */
+	w = gtk_builder_get_object(sonatina.gui, "timeline_eb");
+	gtk_widget_add_events(GTK_WIDGET(w), GDK_BUTTON_PRESS_MASK);
+	g_signal_connect(w, "button-press-event", G_CALLBACK(timeline_clicked_cb), NULL);
 }
 
