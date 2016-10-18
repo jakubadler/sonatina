@@ -22,6 +22,7 @@ void sonatina_init()
 
 	sonatina.mpdsource = NULL;
 	sonatina_settings_load(&sonatina);
+	sonatina_settings_default(sonatina.rc);
 
 	str = g_key_file_get_string(sonatina.rc, "main", "active_profile", NULL);
 	if (str) {

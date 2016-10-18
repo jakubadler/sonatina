@@ -4,9 +4,15 @@
 #include <gtk/gtk.h>
 #include <mpd/client.h>
 
-#define SETTINGS_FILE ".config/sonatina/settings.rc"
-
+#define DEFAULT_MAIN_TITLE "%T"
+#define DEFAULT_MAIN_SUBTITLE "%A - %B"
 #define DEFAULT_PLAYLIST_FORMAT "%N|%T|%A"
+
+/**
+  @brief Load default settings.
+  @param rc Key file
+  */
+void sonatina_settings_default(GKeyFile *rc);
 
 /**
   @brief Load settings from file to sonatina.rc.

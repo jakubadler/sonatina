@@ -29,6 +29,16 @@ void sonatina_settings_prepare()
 	g_mkdir_with_parents(profiledir, 0744);
 }
 
+void sonatina_settings_default(GKeyFile *rc)
+{
+	if (!g_key_file_get_string(rc, "main", "title", NULL))
+		g_key_file_set_string(rc, "main", "title", DEFAULT_MAIN_TITLE);
+	if (!g_key_file_get_string(rc, "main", "subtitle", NULL))
+		g_key_file_set_string(rc, "main", "subtitle", DEFAULT_MAIN_SUBTITLE);
+	if (!g_key_file_get_string(rc, "playlist", "format", NULL))
+		g_key_file_set_string(rc, "playlist", "format", DEFAULT_PLAYLIST_FORMAT);
+}
+
 gboolean sonatina_settings_load()
 {
 	gchar *path;
