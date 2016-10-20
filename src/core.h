@@ -9,9 +9,17 @@
   @brief Structure holding GtkListStore for a playlist and formats for its columns.
   */
 struct playlist {
-	size_t n_columns;
-	gchar **columns;
-	GtkListStore *store;
+	size_t n_columns; /** Number of user-defined columns */
+	gchar **columns; /** Format of user-defined columns; NULL-terminated array of length n_columns */
+	GtkListStore *store; /** Contains internal coulumns and user-defined
+			       columns. Number of coulumns is PL_COUNT + n_columns */
+};
+
+enum pl_columns {
+	PL_ID,
+	PL_POS,
+	PL_WEIGHT,
+	PL_COUNT
 };
 
 /**
@@ -94,6 +102,13 @@ gboolean pl_init(struct playlist *pl, const char *format);
   @param song MPD song structure
   */
 void pl_update(struct playlist *pl, const struct mpd_song *song);
+
+/**
+  @brief Set one song on the playlist to be displayed as currently playing.
+  @param pl Playlist.
+  @param pos_req Position of the song on the playlist.
+  */
+void pl_set_active(struct playlist *pl, int pos_req);
 
 /**
   @brief Free data allocated by playlist.

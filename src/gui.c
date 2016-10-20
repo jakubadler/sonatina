@@ -127,11 +127,11 @@ void stop_cb(GtkWidget *w, gpointer data)
 void volume_cb(GtkWidget *w, gpointer data)
 {
 	gdouble scale;
-	char buf[16];
+	char buf[24];
 
 	MSG_DEBUG("volume_cb");
 	scale = gtk_scale_button_get_value(GTK_SCALE_BUTTON(w));
-	sprintf(buf, "%d", (int) (scale * 100.0));
+	snprintf(buf, sizeof(buf) - 1, "%d", (int) (scale * 100.0));
 	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_SETVOL, buf, NULL);
 }
 
@@ -152,6 +152,26 @@ gboolean timeline_clicked_cb(GtkWidget *w, GdkEvent *event, gpointer data)
 	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_SEEKCUR, buf, NULL);
 
 	return FALSE;
+}
+
+void playlist_clicked_cb(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn *col, gpointer data)
+{
+	GtkTreeModel *store;
+	GtkTreeIter iter;
+	int pos;
+	char buf[24];
+
+	store = gtk_tree_view_get_model(tw);
+
+	if (!gtk_tree_model_get_iter(store, &iter, path)) {
+		MSG_WARNING("playlist item vanished");
+		return;
+	}
+
+	gtk_tree_model_get(store, &iter, PL_POS, &pos, -1);
+
+	snprintf(buf, sizeof(buf) - 1, "%d", pos);
+	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PLAY, buf, NULL);
 }
 
 void connect_signals()
@@ -178,5 +198,9 @@ void connect_signals()
 	w = gtk_builder_get_object(sonatina.gui, "timeline_eb");
 	gtk_widget_add_events(GTK_WIDGET(w), GDK_BUTTON_PRESS_MASK);
 	g_signal_connect(w, "button-press-event", G_CALLBACK(timeline_clicked_cb), NULL);
+
+	/* playlist */
+	w = gtk_builder_get_object(sonatina.gui, "playlist_tw");
+	g_signal_connect(w, "row-activated", G_CALLBACK(playlist_clicked_cb), NULL);
 }
 

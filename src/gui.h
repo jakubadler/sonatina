@@ -16,6 +16,7 @@ void pause_cb(GtkWidget *w, gpointer data);
 void stop_cb(GtkWidget *w, gpointer data);
 
 gboolean timeline_clicked_cb(GtkWidget *w, GdkEvent *event, gpointer data);
+void playlist_clicked_cb(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn *col, gpointer data);
 
 void connect_signals();
 

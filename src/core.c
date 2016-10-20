@@ -97,7 +97,10 @@ void sonatina_disconnect()
 	}
 	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_CLOSE, NULL);
 	mpd_source_close(sonatina.mpdsource);
+
 	sonatina.mpdsource = NULL;
+	sonatina.cur = -1;
+	sonatina_update_pl(NULL);
 }
 
 gboolean sonatina_change_profile(const char *new)
@@ -141,6 +144,7 @@ void sonatina_update_song(const struct mpd_song *song)
 	GObject *subtitle;
 	gchar *format;
 	gchar *str;
+	int pos;
 
 	title = gtk_builder_get_object(sonatina.gui, "title");
 	subtitle = gtk_builder_get_object(sonatina.gui, "subtitle");
@@ -158,8 +162,13 @@ void sonatina_update_song(const struct mpd_song *song)
 	if (str) {
 		gtk_label_set_text(GTK_LABEL(subtitle), str);
 	}
+	 
 	g_free(format);
 	g_free(str);
+
+	pos = mpd_song_get_pos(song);
+	sonatina.cur = pos;
+	pl_set_active(&sonatina.pl, pos);
 }
 
 void sonatina_update_status(const struct mpd_status *status)
@@ -167,8 +176,14 @@ void sonatina_update_status(const struct mpd_status *status)
 	GObject *w;
 	int vol;
 	enum mpd_state state;
+	int cur;
 
-	sonatina.cur = mpd_status_get_song_pos(status);
+	cur = mpd_status_get_song_pos(status);
+	if (cur != sonatina.cur) {
+		/* song changed */
+		mpd_send_cmd(sonatina.mpdsource, MPD_CMD_CURRENTSONG, NULL);
+	}
+	pl_set_active(&sonatina.pl, sonatina.cur);
 
 	/* volume */
 	vol = mpd_status_get_volume(status);
@@ -205,7 +220,6 @@ void sonatina_update_status(const struct mpd_status *status)
 		gtk_widget_hide(GTK_WIDGET(play));
 		gtk_widget_show(GTK_WIDGET(pause));
 		g_timer_start(sonatina.counter);
-		set_song(sonatina.cur);
 		break;
 	}
 
@@ -237,18 +251,22 @@ gboolean pl_init(struct playlist *pl, const char *format)
 	}
 
 	pl->columns = g_strsplit(format, "|", 0);
-	types = g_malloc(pl->n_columns * sizeof(GType));
+	types = g_malloc((PL_COUNT + pl->n_columns) * sizeof(GType));
 
+	types[PL_ID] = G_TYPE_INT;
+	types[PL_POS] = G_TYPE_INT;
+	types[PL_WEIGHT] = G_TYPE_INT;
 	for (i = 0; pl->columns[i]; i++) {
-		types[i] = G_TYPE_STRING;
+		types[PL_COUNT + i] = G_TYPE_STRING;
 	}
-	pl->store = gtk_list_store_newv(pl->n_columns, types);
+	pl->store = gtk_list_store_newv(PL_COUNT + pl->n_columns, types);
 	g_free(types);
 
 	/* update TreeView */
 	tw = gtk_builder_get_object(sonatina.gui, "playlist_tw");
 
 	renderer = gtk_cell_renderer_text_new();
+	g_object_set(G_OBJECT(renderer), "weight-set", TRUE, NULL);
 
 	/* remove all columns */
 	for (i = 0; (col = gtk_tree_view_get_column(GTK_TREE_VIEW(tw), i)); i++) {
@@ -259,36 +277,47 @@ gboolean pl_init(struct playlist *pl, const char *format)
 	for (i = 0; pl->columns[i]; i++) {
 		title = song_attr_format(pl->columns[i], NULL);
 		MSG_DEBUG("adding column with format '%s' to playlist tw", pl->columns[i]);
-		col = gtk_tree_view_column_new_with_attributes(title, renderer, "text", i, NULL);
+		col = gtk_tree_view_column_new_with_attributes(title, renderer, "weight", PL_WEIGHT, "text", PL_COUNT + i, NULL);
 		gtk_tree_view_append_column(GTK_TREE_VIEW(tw), col);
 	}
 
 	return TRUE;
 }
 
-void set_song(int pos)
+void pl_set_active(struct playlist *pl, int pos_req)
 {
-	GtkTreeView *tw;
-	GtkCellRenderer *renderer;
-	GtkTreePath *path;
+	GtkTreeIter iter;
+	gint id, pos;
 
-	tw = gtk_builder_get_object(sonatina.gui, "playlist_tw");
+	if (!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(pl->store), &iter)) {
+		/* empty playlist */
+		return;
+	}
 
-	path = gtk_tree_path_new_from_indices(pos, -1);
-	renderer = gtk_cell_renderer_text_new();
-	g_object_set(G_OBJECT(renderer), "weight", 1000);
-
-	gtk_tree_view_set_cursor_on_cell(tw, path, NULL, NULL, FALSE);
+	do {
+		gtk_tree_model_get(GTK_TREE_MODEL(pl->store), &iter, PL_ID, &id, PL_POS, &pos, -1);
+		if (pos == pos_req) {
+			gtk_list_store_set(pl->store, &iter, PL_WEIGHT, PANGO_WEIGHT_BOLD, -1);
+		} else {
+			gtk_list_store_set(pl->store, &iter, PL_WEIGHT, PANGO_WEIGHT_NORMAL, -1);
+		}
+	} while (gtk_tree_model_iter_next(GTK_TREE_MODEL(pl->store), &iter));
 }
 
 void pl_update(struct playlist *pl, const struct mpd_song *song)
 {
-	int pos;
+	int id, pos;
 	GtkTreePath *path;
 	GtkTreeIter iter;
 	size_t i;
 	gchar *str;
 
+	if (!song) {
+		gtk_list_store_clear(pl->store);
+		return;
+	}
+
+	id = mpd_song_get_id(song);
 	pos = mpd_song_get_pos(song);
 	path = gtk_tree_path_new_from_indices(pos, -1);
 	if (!gtk_tree_model_get_iter(GTK_TREE_MODEL(pl->store), &iter, path)) {
@@ -296,9 +325,11 @@ void pl_update(struct playlist *pl, const struct mpd_song *song)
 	}
 	gtk_tree_path_free(path);
 
+	gtk_list_store_set(pl->store, &iter, PL_ID, id, PL_POS, pos, PL_WEIGHT, PANGO_WEIGHT_NORMAL, -1);
+
 	for (i = 0; i < pl->n_columns; i++) {
 		str = song_attr_format(pl->columns[i], song);
-		gtk_list_store_set(pl->store, &iter, i, str, -1);
+		gtk_list_store_set(pl->store, &iter, PL_COUNT + i, str, -1);
 		g_free(str);
 	}
 }
