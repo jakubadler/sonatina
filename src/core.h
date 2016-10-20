@@ -25,6 +25,7 @@ struct sonatina_instance {
 	GList *profiles; /** List of GKeyFile objects representing available profiles */
 
 	struct playlist pl;
+	int cur;
 
 	int elapsed;
 	int total;

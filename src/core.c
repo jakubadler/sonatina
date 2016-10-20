@@ -37,6 +37,8 @@ void sonatina_init()
 	sonatina.counter = g_timer_new();
 	g_timer_stop(sonatina.counter);
 	g_timeout_add_seconds(1, counter_cb, NULL);
+
+	sonatina.cur = -1;
 }
 
 void sonatina_destroy()
@@ -137,20 +139,27 @@ void sonatina_update_song(const struct mpd_song *song)
 {
 	GObject *title;
 	GObject *subtitle;
-	const char *str;
+	gchar *format;
+	gchar *str;
 
 	title = gtk_builder_get_object(sonatina.gui, "title");
 	subtitle = gtk_builder_get_object(sonatina.gui, "subtitle");
 
-	str = mpd_song_get_tag(song, MPD_TAG_TITLE, 0);
+	format = g_key_file_get_string(sonatina.rc, "main", "title", NULL);
+	str = song_attr_format(format, song);
 	if (str) {
 		gtk_label_set_text(GTK_LABEL(title), str);
 	}
+	g_free(format);
+	g_free(str);
 
-	str = mpd_song_get_tag(song, MPD_TAG_ALBUM, 0);
+	format = g_key_file_get_string(sonatina.rc, "main", "subtitle", NULL);
+	str = song_attr_format(format, song);
 	if (str) {
 		gtk_label_set_text(GTK_LABEL(subtitle), str);
 	}
+	g_free(format);
+	g_free(str);
 }
 
 void sonatina_update_status(const struct mpd_status *status)
@@ -158,6 +167,8 @@ void sonatina_update_status(const struct mpd_status *status)
 	GObject *w;
 	int vol;
 	enum mpd_state state;
+
+	sonatina.cur = mpd_status_get_song_pos(status);
 
 	/* volume */
 	vol = mpd_status_get_volume(status);
@@ -194,6 +205,7 @@ void sonatina_update_status(const struct mpd_status *status)
 		gtk_widget_hide(GTK_WIDGET(play));
 		gtk_widget_show(GTK_WIDGET(pause));
 		g_timer_start(sonatina.counter);
+		set_song(sonatina.cur);
 		break;
 	}
 
@@ -252,6 +264,21 @@ gboolean pl_init(struct playlist *pl, const char *format)
 	}
 
 	return TRUE;
+}
+
+void set_song(int pos)
+{
+	GtkTreeView *tw;
+	GtkCellRenderer *renderer;
+	GtkTreePath *path;
+
+	tw = gtk_builder_get_object(sonatina.gui, "playlist_tw");
+
+	path = gtk_tree_path_new_from_indices(pos, -1);
+	renderer = gtk_cell_renderer_text_new();
+	g_object_set(G_OBJECT(renderer), "weight", 1000);
+
+	gtk_tree_view_set_cursor_on_cell(tw, path, NULL, NULL, FALSE);
 }
 
 void pl_update(struct playlist *pl, const struct mpd_song *song)
