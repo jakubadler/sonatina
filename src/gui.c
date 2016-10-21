@@ -127,19 +127,16 @@ void stop_cb(GtkWidget *w, gpointer data)
 void volume_cb(GtkWidget *w, gpointer data)
 {
 	gdouble scale;
-	char buf[24];
 
 	MSG_DEBUG("volume_cb");
 	scale = gtk_scale_button_get_value(GTK_SCALE_BUTTON(w));
-	snprintf(buf, sizeof(buf) - 1, "%d", (int) (scale * 100.0));
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_SETVOL, buf, NULL);
+	sonatina_setvol(scale);
 }
 
 gboolean timeline_clicked_cb(GtkWidget *w, GdkEvent *event, gpointer data)
 {
 	gdouble x;
 	int width, time;
-	char buf[24];
 
 	MSG_DEBUG("timeline_clicked_cb()");
 
@@ -148,8 +145,7 @@ gboolean timeline_clicked_cb(GtkWidget *w, GdkEvent *event, gpointer data)
 
 	if (width == 0) time = 0;
 	else time = (x / width) * sonatina.total;
-	snprintf(buf, sizeof(buf) - 1, "%d", time);
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_SEEKCUR, buf, NULL);
+	sonatina_seek(time);
 
 	return FALSE;
 }
@@ -159,7 +155,6 @@ void playlist_clicked_cb(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn *
 	GtkTreeModel *store;
 	GtkTreeIter iter;
 	int pos;
-	char buf[24];
 
 	store = gtk_tree_view_get_model(tw);
 
@@ -170,8 +165,7 @@ void playlist_clicked_cb(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn *
 
 	gtk_tree_model_get(store, &iter, PL_POS, &pos, -1);
 
-	snprintf(buf, sizeof(buf) - 1, "%d", pos);
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PLAY, buf, NULL);
+	sonatina_play(pos);
 }
 
 void connect_signals()

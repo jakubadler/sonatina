@@ -363,3 +363,31 @@ gboolean counter_cb(gpointer data)
 	return TRUE;
 }
 
+void sonatina_play(int pos)
+{
+	char buf[24];
+
+	if (pos < 0) {
+		mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PLAY, NULL);
+	} else {
+		snprintf(buf, sizeof(buf) - 1, "%d", pos);
+		mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PLAY, buf, NULL);
+	}
+}
+
+void sonatina_seek(int time)
+{
+	char buf[24];
+
+	snprintf(buf, sizeof(buf) - 1, "%d", time);
+	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_SEEKCUR, buf, NULL);
+}
+
+void sonatina_setvol(double vol)
+{
+	char buf[24];
+
+	snprintf(buf, sizeof(buf) - 1, "%d", (int) (vol * 100.0));
+	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_SETVOL, buf, NULL);
+}
+

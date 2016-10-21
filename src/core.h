@@ -123,4 +123,22 @@ void pl_free(struct playlist *pl);
   */
 gboolean counter_cb(gpointer data);
 
+/**
+  @brief Convenience function to send mpd command 'play' with integer argument.
+  @param pos Position attribute of the song to be played.
+  */
+void sonatina_play(int pos);
+
+/**
+  @brief Convenience function to send mpd command 'seekcur' with integer argument.
+  @param time Time where to seek to.
+  */
+void sonatina_seek(int time);
+
+/**
+  @brief Convenience function to send mpd command 'setvol' with integer argument.
+  @param vol Volume as a value in range between 0 and 1.
+  */
+void sonatina_setvol(double vol);
+
 #endif
