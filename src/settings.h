@@ -1,8 +1,7 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
-#include <gtk/gtk.h>
-#include <mpd/client.h>
+#include <glib.h>
 
 #define DEFAULT_MAIN_TITLE "%T"
 #define DEFAULT_MAIN_SUBTITLE "%A - %B"

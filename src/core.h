@@ -2,8 +2,9 @@
 #define CORE_H
 
 #include <glib.h>
+#include <gtk/gtk.h>
 
-#include "settings.h"
+#include "mpd/client.h"
 
 /**
   @brief Structure holding GtkListStore for a playlist and formats for its columns.

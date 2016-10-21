@@ -1,5 +1,3 @@
-#include <string.h>
-
 #include <glib.h>
 #include <gtk/gtk.h>
 
@@ -9,8 +7,7 @@
 #include "client.h"
 #include "util.h"
 #include "songattr.h"
-
-#define DEFAULT_ALBUM_ART SHAREDIR "/album_art.svg"
+#include "settings.h"
 
 struct sonatina_instance sonatina;
 

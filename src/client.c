@@ -1,10 +1,9 @@
-#include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <poll.h>
-#include <stdarg.h>
 
 #include <glib.h>
 
