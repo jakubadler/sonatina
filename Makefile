@@ -1,5 +1,7 @@
 include config.mk
 
+.PHONY: build install uninstall doc clean test
+
 build:
 	make -C src
 	make -C data
@@ -14,6 +16,12 @@ uninstall:
 	make -C src uninstall
 	make -C data uninstall
 	make -C po uninstall
+
+doc:
+	doxygen
+
+clean-doc:
+	rm -rf doc
 
 clean:
 	make -C src clean
