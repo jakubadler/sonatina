@@ -37,8 +37,7 @@ union mpd_cmd_answer {
 	struct mpd_song *song; /* MPD_CMD_CURRENTSONG */
 	struct mpd_status *status; /* MPD_CMD_STATUS */
 	struct mpd_stats *stats; /* MPD_CMD_STATS */
-	struct { struct mpd_song *song; GList *list; } plinfo; /* MPD_CMD_PLINFO
-								  */
+	struct { struct mpd_song *song; GList *list; } plinfo; /* MPD_CMD_PLINFO */
 	int idle; /* MPD_CMD_IDLE */
 	gboolean ok;
 };
@@ -49,6 +48,10 @@ union mpd_cmd_answer {
 struct mpd_cmd {
 	enum mpd_cmd_type type;
 	union mpd_cmd_answer answer;
+	gboolean (*parse_pair)(union mpd_cmd_answer *answer,
+			const struct mpd_pair *pair); /** Function to parse single pair. Called each time a pair is received */
+	void (*process)(union mpd_cmd_answer *answer); /** Function to process received answer. Called after whole answer is received */
+	void (*free_answer)(union mpd_cmd_answer *answer);
 };
 
 #define MPD_CHANGED_DB		0x001
@@ -83,6 +86,16 @@ void mpd_cmd_free(struct mpd_cmd *cmd);
   @param cmd MPD command
   */
 void mpd_cmd_process_answer(struct mpd_cmd *cmd);
+
+gboolean parse_pair_status(union mpd_cmd_answer *answer, const struct mpd_pair *pair);
+gboolean parse_pair_song(union mpd_cmd_answer *answer, const struct mpd_pair *pair);
+gboolean parse_pair_plsong(union mpd_cmd_answer *answer, const struct mpd_pair *pair);
+gboolean parse_pair_idle(union mpd_cmd_answer *answer, const struct mpd_pair *pair);
+
+void cmd_process_song(union mpd_cmd_answer *answer);
+void cmd_process_status(union mpd_cmd_answer *answer);
+void cmd_process_idle(union mpd_cmd_answer *answer);
+void cmd_process_plinfo(union mpd_cmd_answer *answer);
 
 /**
   @brief Function to create TCP connection to the server.
@@ -133,15 +146,6 @@ gboolean mpd_check(GSource *source);
   @brief Part of GSource implementation.
   */
 gboolean mpd_dispatch(GSource *source, GSourceFunc callback, gpointer data);
-
-/**
-  @brief Parse pair that is part of an answer to a command. This function should
-  be called each time a pair is received for this command.
-  @param pair MPD pair
-  @param cmd MPD command
-  @returns TRUE when pair was successfully parsed, FALSE otherwise.
-  */
-gboolean mpd_parse_pair(const struct mpd_pair *pair, struct mpd_cmd *cmd);
 
 /**
   @brief Send command to MPD server.

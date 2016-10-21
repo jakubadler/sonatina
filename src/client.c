@@ -103,17 +103,32 @@ struct mpd_cmd *mpd_cmd_new(enum mpd_cmd_type type)
 
 	cmd = g_malloc(sizeof(struct mpd_cmd));
 	cmd->type = type;
+	cmd->parse_pair = NULL;
+	cmd->process = NULL;
+	cmd->free_answer = NULL;
 
 	switch (type) {
 	case MPD_CMD_CURRENTSONG:
+		cmd->parse_pair = parse_pair_song;
+		cmd->process = cmd_process_song;
+		cmd->answer.song = NULL;
+		break;
 	case MPD_CMD_STATUS:
+		cmd->parse_pair = parse_pair_status;
+		cmd->process = cmd_process_status;
+		cmd->answer.status = NULL;
+		break;
 	case MPD_CMD_STATS:
-		cmd->answer.ptr = NULL;
+		cmd->answer.stats = NULL;
 		break;
 	case MPD_CMD_IDLE:
+		cmd->parse_pair = parse_pair_idle;
+		cmd->process = cmd_process_idle;
 		cmd->answer.idle = 0;
 		break;
 	case MPD_CMD_PLINFO:
+		cmd->parse_pair = parse_pair_plsong;
+		cmd->process = cmd_process_plinfo;
 		cmd->answer.plinfo.song = NULL;
 		cmd->answer.plinfo.list = NULL;
 		break;
@@ -156,51 +171,129 @@ void mpd_cmd_free(struct mpd_cmd *cmd)
 	g_free(cmd);
 }
 
-void mpd_idle_update(int flags)
+void cmd_process_song(union mpd_cmd_answer *answer)
 {
-	if (flags & MPD_CHANGED_PLAYER ||
-	    flags & MPD_CHANGED_MIXER ||
-	    flags & MPD_CHANGED_OPTIONS ) {
+	if (answer->song) {
+		sonatina_update_song(answer->song);
+	}
+}
+
+void cmd_process_status(union mpd_cmd_answer *answer)
+{
+	if (answer->status) {
+		sonatina_update_status(answer->status);
+	}
+}
+
+void cmd_process_idle(union mpd_cmd_answer *answer)
+{
+	if (answer->idle & MPD_CHANGED_PLAYER ||
+	    answer->idle & MPD_CHANGED_MIXER ||
+	    answer->idle & MPD_CHANGED_OPTIONS ) {
 		mpd_send_cmd(sonatina.mpdsource, MPD_CMD_STATUS, NULL);
 	}
-	if (flags & MPD_CHANGED_PL) {
+	if (answer->idle & MPD_CHANGED_PL) {
 		mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PLINFO, NULL);
 	}
 }
 
-void mpd_cmd_process_answer(struct mpd_cmd *cmd)
+void cmd_process_plinfo(union mpd_cmd_answer *answer)
 {
 	GList *cur;
 
-	if (!cmd) {
-		return;
+	if (answer->plinfo.song) {
+		answer->plinfo.list = g_list_prepend(answer->plinfo.list, answer->plinfo.song);
+	}
+	answer->plinfo.list = g_list_reverse(answer->plinfo.list);
+	sonatina_update_pl(NULL);
+	for (cur = answer->plinfo.list; cur; cur = cur->next) {
+		sonatina_update_pl(cur->data);
+	}
+}
+
+gboolean parse_pair_status(union mpd_cmd_answer *answer, const struct mpd_pair *pair)
+{
+	if (!(answer->status)) {
+		answer->status = mpd_status_begin();
+		if (!(answer->status)) {
+			MSG_ERROR("Couldn't allocate mpd status");
+			return FALSE;
+		}
+	}
+	mpd_status_feed(answer->status, pair);
+
+	return TRUE;
+}
+
+gboolean parse_pair_song(union mpd_cmd_answer *answer, const struct mpd_pair *pair)
+{
+	if (answer->song) {
+		return mpd_song_feed(answer->song, pair);
+	}
+	answer->song = mpd_song_begin(pair);
+	if (!(answer->song)) {
+		return FALSE;
 	}
 
-	switch (cmd->type) {
-	case MPD_CMD_STATUS:
-		if (cmd->answer.status)
-			sonatina_update_status(cmd->answer.status);
-		break;
-	case MPD_CMD_CURRENTSONG:
-		if (cmd->answer.song)
-			sonatina_update_song(cmd->answer.song);
-		break;
-	case MPD_CMD_IDLE:
-		mpd_idle_update(cmd->answer.idle);
-		break;
-	case MPD_CMD_PLINFO:
-		if (cmd->answer.plinfo.song) {
-			cmd->answer.plinfo.list = g_list_prepend(cmd->answer.plinfo.list, cmd->answer.plinfo.song);
+	return TRUE;
+
+}
+
+gboolean parse_pair_plsong(union mpd_cmd_answer *answer, const struct mpd_pair *pair)
+{
+	if (!answer->plinfo.song) {
+		/* first pair of a song*/
+		answer->plinfo.song = mpd_song_begin(pair);
+		if (!answer->plinfo.song) {
+			MSG_ERROR("couldn't allocate song");
+			return FALSE;
 		}
-		cmd->answer.plinfo.list = g_list_reverse(cmd->answer.plinfo.list);
-		for (cur = cmd->answer.plinfo.list; cur; cur = cur->next) {
-			sonatina_update_pl(cur->data);
+	}
+	if (!mpd_song_feed(answer->song, pair)) {
+		/* beginning of a new song */
+		answer->plinfo.list = g_list_prepend(answer->plinfo.list, answer->plinfo.song);
+		answer->plinfo.song = mpd_song_begin(pair);
+		if (!answer->plinfo.song) {
+			return FALSE;
 		}
-		break;
-	default:
-		break;
 	}
 
+	return TRUE;
+}
+
+gboolean parse_pair_idle(union mpd_cmd_answer *answer, const struct mpd_pair *pair)
+{
+	if (strcmp(pair->name, "changed")) {
+		return FALSE;
+	}
+	if (!strcmp("database", pair->value)) {
+		answer->idle |= MPD_CHANGED_DB;
+	} else if (!strcmp("update", pair->value)) {
+		answer->idle |= MPD_CHANGED_UPDATE;
+	} else if (!strcmp("stored_playlist", pair->value)) {
+		answer->idle |= MPD_CHANGED_STORED_PL;
+	} else if (!strcmp("playlist", pair->value)) {
+		answer->idle |= MPD_CHANGED_PL;
+	} else if (!strcmp("player", pair->value)) {
+		answer->idle |= MPD_CHANGED_PLAYER;
+	} else if (!strcmp("mixer", pair->value)) {
+		answer->idle |= MPD_CHANGED_MIXER;
+	} else if (!strcmp("output", pair->value)) {
+		answer->idle |= MPD_CHANGED_OUTPUT;
+	} else if (!strcmp("options", pair->value)) {
+		answer->idle |= MPD_CHANGED_OPTIONS;
+	} else if (!strcmp("sticker", pair->value)) {
+		answer->idle |= MPD_CHANGED_STICKER;
+	} else if (!strcmp("subscription", pair->value)) {
+		answer->idle |= MPD_CHANGED_SUBSCR;
+	} else if (!strcmp("message", pair->value)) {
+		answer->idle |= MPD_CHANGED_MESSAGE;
+	} else {
+		return FALSE;
+	}
+	MSG_DEBUG("changed: %s", pair->value);
+
+	return TRUE;
 }
 
 gboolean mpd_recv(struct mpd_source *source)
@@ -250,13 +343,15 @@ gboolean mpd_recv(struct mpd_source *source)
 		case MPD_PARSER_PAIR:
 			pair.name = mpd_parser_get_name(source->parser);
 			pair.value = mpd_parser_get_value(source->parser);
-			mpd_parse_pair(&pair, cmd);
+			if (cmd->parse_pair) {
+				cmd->parse_pair(&cmd->answer, &pair);
+			}
 			break;
 		}
 	}
 
-	if (success) {
-		mpd_cmd_process_answer(cmd);
+	if (success && cmd->process) {
+		cmd->process(&cmd->answer);
 	}
 	mpd_cmd_free(cmd);
 	g_queue_pop_head(&source->pending);
@@ -266,79 +361,6 @@ gboolean mpd_recv(struct mpd_source *source)
 	}
 
 	return TRUE;
-}
-
-gboolean mpd_parse_pair(const struct mpd_pair *pair, struct mpd_cmd *cmd)
-{
-	gboolean result = TRUE;
-
-	switch (cmd->type) {
-	case MPD_CMD_STATUS:
-		if (!(cmd->answer.status)) {
-			cmd->answer.status = mpd_status_begin();
-		}
-		mpd_status_feed(cmd->answer.status, pair);
-		break;
-	case MPD_CMD_CURRENTSONG:
-		if (cmd->answer.song) {
-			result = mpd_song_feed(cmd->answer.song, pair);
-		} else {
-			cmd->answer.song = mpd_song_begin(pair);
-			if (!(cmd->answer.song)) {
-				result = FALSE;
-			}
-		}
-		break;
-	case MPD_CMD_PLINFO:
-		if (!cmd->answer.song) {
-			/* first pair */
-			cmd->answer.plinfo.song = mpd_song_begin(pair);
-			if (!cmd->answer.plinfo.song) {
-				MSG_ERROR("couldn't allocate song");
-				return FALSE;
-			}
-		}
-		if (!mpd_song_feed(cmd->answer.song, pair)) {
-			/* beginning of a new song */
-			cmd->answer.plinfo.list = g_list_prepend(cmd->answer.plinfo.list, cmd->answer.plinfo.song);
-			cmd->answer.plinfo.song = mpd_song_begin(pair);
-		}
-		break;
-	case MPD_CMD_IDLE:
-		if (strcmp(pair->name, "changed")) {
-			break;
-		}
-		if (!strcmp("database", pair->value)) {
-			cmd->answer.idle |= MPD_CHANGED_DB;
-		} else if (!strcmp("update", pair->value)) {
-			cmd->answer.idle |= MPD_CHANGED_UPDATE;
-		} else if (!strcmp("stored_playlist", pair->value)) {
-			cmd->answer.idle |= MPD_CHANGED_STORED_PL;
-		} else if (!strcmp("playlist", pair->value)) {
-			cmd->answer.idle |= MPD_CHANGED_PL;
-		} else if (!strcmp("player", pair->value)) {
-			cmd->answer.idle |= MPD_CHANGED_PLAYER;
-		} else if (!strcmp("mixer", pair->value)) {
-			cmd->answer.idle |= MPD_CHANGED_MIXER;
-		} else if (!strcmp("output", pair->value)) {
-			cmd->answer.idle |= MPD_CHANGED_OUTPUT;
-		} else if (!strcmp("options", pair->value)) {
-			cmd->answer.idle |= MPD_CHANGED_OPTIONS;
-		} else if (!strcmp("sticker", pair->value)) {
-			cmd->answer.idle |= MPD_CHANGED_STICKER;
-		} else if (!strcmp("subscription", pair->value)) {
-			cmd->answer.idle |= MPD_CHANGED_SUBSCR;
-		} else if (!strcmp("message", pair->value)) {
-			cmd->answer.idle |= MPD_CHANGED_MESSAGE;
-		}
-		MSG_DEBUG("changed: %s", pair->value);
-		break;
-		
-	default:
-		break;
-	}
-
-	return result;
 }
 
 gboolean mpd_send_cmd(GSource *source, enum mpd_cmd_type type, ...)
