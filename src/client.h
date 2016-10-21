@@ -34,9 +34,11 @@ struct mpd_source {
 
 union mpd_cmd_answer {
 	void *ptr;
-	struct mpd_song *song; /* MPD_CMD_CURRENTSONG, MPD_CMD_PLINFO */
+	struct mpd_song *song; /* MPD_CMD_CURRENTSONG */
 	struct mpd_status *status; /* MPD_CMD_STATUS */
 	struct mpd_stats *stats; /* MPD_CMD_STATS */
+	struct { struct mpd_song *song; GList *list; } plinfo; /* MPD_CMD_PLINFO
+								  */
 	int idle; /* MPD_CMD_IDLE */
 	gboolean ok;
 };
