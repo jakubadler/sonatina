@@ -295,10 +295,11 @@ gboolean parse_pair_idle(union mpd_cmd_answer *answer, const struct mpd_pair *pa
 	return TRUE;
 }
 
+#define MPD_GREETING "OK MPD"
+
 gboolean mpd_recv(struct mpd_source *source)
 {
 	char *line;
-	char version[32];
 	enum mpd_parser_result result;
 	struct mpd_cmd *cmd;
 	struct mpd_pair pair;
@@ -319,10 +320,9 @@ gboolean mpd_recv(struct mpd_source *source)
 		}
 		MSG_DEBUG("msg recv: %s", line);
 
-		/* ugly way to determine if this is line is the server greeting */
-		if (sscanf(line, "OK MPD %s", version) == 1) {
-			MSG_DEBUG("Server greeting recognized; version %31s", version);
-			return TRUE;
+		if (cmd->type == MPD_CMD_NONE && !strncmp(line, MPD_GREETING, strlen(MPD_GREETING))) {
+			success = TRUE;
+			break;
 		}
 
 		result = mpd_parser_feed(source->parser, line);
@@ -441,6 +441,7 @@ GSource *mpd_source_new(int fd)
 {
 	GSource *source;
 	struct mpd_source *mpdsource;
+	struct mpd_cmd *greeting;
 
 	source = g_source_new(&mpdsourcefuncs, sizeof(struct mpd_source));
 	mpdsource = (struct mpd_source *) source;
@@ -450,6 +451,9 @@ GSource *mpd_source_new(int fd)
 
 	mpdsource->parser = mpd_parser_new();
 	g_queue_init(&mpdsource->pending);
+
+	greeting = mpd_cmd_new(MPD_CMD_NONE);
+	g_queue_push_tail(&mpdsource->pending, greeting);
 
 	return source;
 }
