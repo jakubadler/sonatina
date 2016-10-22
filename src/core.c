@@ -76,11 +76,11 @@ gboolean sonatina_connect(const char *host, int port)
 	context = g_main_context_default();
 	sonatina.mpdsource = mpd_source_new(mpdfd);
 	g_source_attach(sonatina.mpdsource, context);
-/*
+
 	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_STATUS, NULL);
 	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_CURRENTSONG, NULL);
 	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PLINFO, NULL);
-*/
+
 	return TRUE;
 }
 
