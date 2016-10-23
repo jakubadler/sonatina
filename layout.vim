@@ -9,6 +9,12 @@ split src/settings.h
 tabnew src/gui.c
 split src/gui.h
 
+tabnew src/playlist.c
+split src/playlist.h
+
+tabnew src/library.c
+split src/library.h
+
 tabnew src/client.c
 split src/client.h
 

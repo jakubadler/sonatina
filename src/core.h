@@ -7,23 +7,6 @@
 #include "mpd/client.h"
 
 /**
-  @brief Structure holding GtkListStore for a playlist and formats for its columns.
-  */
-struct playlist {
-	size_t n_columns; /** Number of user-defined columns */
-	gchar **columns; /** Format of user-defined columns; NULL-terminated array of length n_columns */
-	GtkListStore *store; /** Contains internal coulumns and user-defined
-			       columns. Number of coulumns is PL_COUNT + n_columns */
-};
-
-enum pl_columns {
-	PL_ID,
-	PL_POS,
-	PL_WEIGHT,
-	PL_COUNT
-};
-
-/**
   @brief Structure holding data of a running sonatina instance.
   */
 struct sonatina_instance {
@@ -32,14 +15,47 @@ struct sonatina_instance {
 	GtkBuilder *gui;
 	GKeyFile *rc;
 	GList *profiles; /** List of GKeyFile objects representing available profiles */
+	GList *tabs;
 
-	struct playlist pl;
 	int cur;
-
 	int elapsed;
 	int total;
 	GTimer *counter;
 };
+
+struct sonatina_tab {
+	gchar *name;
+	gchar *label;
+	GtkWidget *widget;
+	gboolean (*init)(struct sonatina_tab *);
+	void (*set_mpdsource)(struct sonatina_tab *, GSource *);
+	void (*destroy)(struct sonatina_tab *);
+};
+
+typedef gboolean (*TabInitFunc)(struct sonatina_tab *);
+typedef void (*TabSetSourceFunc)(struct sonatina_tab *, GSource *);
+typedef void (*TabDestroyFunc)(struct sonatina_tab *);
+
+/**
+  @brief Create a new tab.
+  @param name A name that will be used internally for the tab.
+  @param label A human-readable name for the tab, that will be used as a label.
+  @param size Size of the tab structure. Must be at least sizeof(struct sonatina_tab).
+  @param init Function to initialize the tab.
+  @param destroy Function free memory allocated by init function.
+  @returns A newly allocated tab that should be freed with g_free().
+  */
+struct sonatina_tab *sonatina_tab_new(const char *name, const char *label, size_t size, TabInitFunc init, TabSetSourceFunc set_source, TabDestroyFunc destroy);
+
+void sonatina_tab_destroy(struct sonatina_tab *tab);
+
+/**
+  @brief Append a newly created tab to sonatina's list of tabs and call its initialization function.
+  @param tab Tab to append.
+  @returns TRUE if tab was successfully initialized and appended to list.
+  */
+gboolean sonatina_append_tab(struct sonatina_tab *tab);
+gboolean sonatina_remove_tab(const char *name);
 
 extern struct sonatina_instance sonatina;
 
@@ -77,45 +93,6 @@ void sonatina_update_song(const struct mpd_song *song);
   @param status MPD status struct.
   */
 void sonatina_update_status(const struct mpd_status *status);
-
-/**
-  @brief Update single song on playlist on a sonatina instance.
-  @param song MPD song struct.
-  */
-void sonatina_update_pl(const struct mpd_song *song);
-
-/**
-  @brief Clear playlist on a sonatina instance.
-  */
-void sonatina_clear_pl();
-
-/**
-  @brief Initialize playlist structure with given format.
-  @param pl Pointer to playlist structure.
-  @param format Format string specifying format of each column separated by '|'.
-  @returns TRUE on success, FALSE otherwise.
-  */
-gboolean pl_init(struct playlist *pl, const char *format);
-
-/**
-  @brief Update playlist with single song.
-  @param pl playlist structure
-  @param song MPD song structure
-  */
-void pl_update(struct playlist *pl, const struct mpd_song *song);
-
-/**
-  @brief Set one song on the playlist to be displayed as currently playing.
-  @param pl Playlist.
-  @param pos_req Position of the song on the playlist.
-  */
-void pl_set_active(struct playlist *pl, int pos_req);
-
-/**
-  @brief Free data allocated by playlist.
-  @param pl playlist structure
-  */
-void pl_free(struct playlist *pl);
 
 /**
   @brief Function called every second to check elapsed time and update progressbar.

@@ -9,25 +9,21 @@
 #include "songattr.h"
 #include "settings.h"
 
+#include "playlist.h"
+#include "library.h"
+
 struct sonatina_instance sonatina;
 
 void sonatina_init()
 {
 	gchar *str;
+	struct sonatina_tab *tab;
 
 	MSG_DEBUG("sonatina_init()");
 
 	sonatina.mpdsource = NULL;
 	sonatina_settings_load(&sonatina);
 	sonatina_settings_default(sonatina.rc);
-
-	str = g_key_file_get_string(sonatina.rc, "main", "active_profile", NULL);
-	if (str) {
-		if (!sonatina_change_profile(str)) {
-			MSG_WARNING("invalid profile %s", str);
-		}
-		g_free(str);
-	}
 
 	sonatina.elapsed = 0;
 	sonatina.total = 0;
@@ -36,6 +32,22 @@ void sonatina_init()
 	g_timeout_add_seconds(1, counter_cb, NULL);
 
 	sonatina.cur = -1;
+
+	sonatina.tabs = NULL;
+
+	tab = sonatina_tab_new("playlist", "Playlist", sizeof(struct pl_tab), pl_tab_init, pl_tab_set_source, pl_tab_destroy);
+	sonatina_append_tab(tab);
+
+	tab = sonatina_tab_new("library", "Library", sizeof(struct library_tab), library_tab_init, library_tab_set_source, library_tab_destroy);
+	sonatina_append_tab(tab);
+
+	str = g_key_file_get_string(sonatina.rc, "main", "active_profile", NULL);
+	if (str) {
+		if (!sonatina_change_profile(str)) {
+			MSG_WARNING("invalid profile %s", str);
+		}
+		g_free(str);
+	}
 }
 
 void sonatina_destroy()
@@ -47,7 +59,6 @@ void sonatina_destroy()
 
 	sonatina_settings_save();
 
-	pl_free(&sonatina.pl);
 	g_key_file_free(sonatina.rc);
 
 	for (cur = sonatina.profiles; cur; cur = cur->next) {
@@ -66,6 +77,8 @@ gboolean sonatina_connect(const char *host, int port)
 {
 	GMainContext *context;
 	int mpdfd;
+	GList *cur;
+	struct sonatina_tab *tab;
 
 	mpdfd = client_connect(host, port);
 	if (mpdfd < 0) {
@@ -77,9 +90,14 @@ gboolean sonatina_connect(const char *host, int port)
 	sonatina.mpdsource = mpd_source_new(mpdfd);
 	g_source_attach(sonatina.mpdsource, context);
 
+	for (cur = sonatina.tabs; cur; cur = cur->next) {
+		tab = cur->data;
+		tab->set_mpdsource(tab, sonatina.mpdsource);
+	}
+
 	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_STATUS, NULL);
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_CURRENTSONG, NULL);
 	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PLINFO, NULL);
+	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_CURRENTSONG, NULL);
 
 	return TRUE;
 }
@@ -97,7 +115,6 @@ void sonatina_disconnect()
 
 	sonatina.mpdsource = NULL;
 	sonatina.cur = -1;
-	sonatina_update_pl(NULL);
 }
 
 gboolean sonatina_change_profile(const char *new)
@@ -165,7 +182,6 @@ void sonatina_update_song(const struct mpd_song *song)
 
 	pos = mpd_song_get_pos(song);
 	sonatina.cur = pos;
-	pl_set_active(&sonatina.pl, pos);
 }
 
 void sonatina_update_status(const struct mpd_status *status)
@@ -173,14 +189,8 @@ void sonatina_update_status(const struct mpd_status *status)
 	GObject *w;
 	int vol;
 	enum mpd_state state;
-	int cur;
 
-	cur = mpd_status_get_song_pos(status);
-	if (cur != sonatina.cur) {
-		/* song changed */
-		mpd_send_cmd(sonatina.mpdsource, MPD_CMD_CURRENTSONG, NULL);
-	}
-	pl_set_active(&sonatina.pl, sonatina.cur);
+	sonatina.cur = mpd_status_get_song_pos(status);
 
 	/* volume */
 	vol = mpd_status_get_volume(status);
@@ -219,122 +229,6 @@ void sonatina_update_status(const struct mpd_status *status)
 		g_timer_start(sonatina.counter);
 		break;
 	}
-
-}
-
-void sonatina_update_pl(const struct mpd_song *song)
-{
-	pl_update(&sonatina.pl, song);
-}
-
-void sonatina_clear_pl()
-{
-	gtk_list_store_clear(sonatina.pl.store);
-}
-
-gboolean pl_init(struct playlist *pl, const char *format)
-{
-	size_t i;
-	GType *types;
-	GObject *tw;
-	GtkCellRenderer *renderer;
-	GtkTreeViewColumn *col;
-	gchar *title;
-
-	pl->n_columns = 1;
-	for (i = 0; format[i]; i++) {
-		if (format[i] == '|')
-			pl->n_columns++;
-	}
-
-	pl->columns = g_strsplit(format, "|", 0);
-	types = g_malloc((PL_COUNT + pl->n_columns) * sizeof(GType));
-
-	types[PL_ID] = G_TYPE_INT;
-	types[PL_POS] = G_TYPE_INT;
-	types[PL_WEIGHT] = G_TYPE_INT;
-	for (i = 0; pl->columns[i]; i++) {
-		types[PL_COUNT + i] = G_TYPE_STRING;
-	}
-	pl->store = gtk_list_store_newv(PL_COUNT + pl->n_columns, types);
-	g_free(types);
-
-	/* update TreeView */
-	tw = gtk_builder_get_object(sonatina.gui, "playlist_tw");
-
-	renderer = gtk_cell_renderer_text_new();
-	g_object_set(G_OBJECT(renderer), "weight-set", TRUE, NULL);
-
-	/* remove all columns */
-	for (i = 0; (col = gtk_tree_view_get_column(GTK_TREE_VIEW(tw), i)); i++) {
-		gtk_tree_view_remove_column(GTK_TREE_VIEW(tw), col);
-	}
-
-	/* add new columns */
-	for (i = 0; pl->columns[i]; i++) {
-		title = song_attr_format(pl->columns[i], NULL);
-		MSG_DEBUG("adding column with format '%s' to playlist tw", pl->columns[i]);
-		col = gtk_tree_view_column_new_with_attributes(title, renderer, "weight", PL_WEIGHT, "text", PL_COUNT + i, NULL);
-		gtk_tree_view_append_column(GTK_TREE_VIEW(tw), col);
-	}
-
-	return TRUE;
-}
-
-void pl_set_active(struct playlist *pl, int pos_req)
-{
-	GtkTreeIter iter;
-	gint id, pos;
-
-	if (!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(pl->store), &iter)) {
-		/* empty playlist */
-		return;
-	}
-
-	do {
-		gtk_tree_model_get(GTK_TREE_MODEL(pl->store), &iter, PL_ID, &id, PL_POS, &pos, -1);
-		if (pos == pos_req) {
-			gtk_list_store_set(pl->store, &iter, PL_WEIGHT, PANGO_WEIGHT_BOLD, -1);
-		} else {
-			gtk_list_store_set(pl->store, &iter, PL_WEIGHT, PANGO_WEIGHT_NORMAL, -1);
-		}
-	} while (gtk_tree_model_iter_next(GTK_TREE_MODEL(pl->store), &iter));
-}
-
-void pl_update(struct playlist *pl, const struct mpd_song *song)
-{
-	int id, pos;
-	GtkTreePath *path;
-	GtkTreeIter iter;
-	size_t i;
-	gchar *str;
-
-	if (!song) {
-		gtk_list_store_clear(pl->store);
-		return;
-	}
-
-	id = mpd_song_get_id(song);
-	pos = mpd_song_get_pos(song);
-	path = gtk_tree_path_new_from_indices(pos, -1);
-	if (!gtk_tree_model_get_iter(GTK_TREE_MODEL(pl->store), &iter, path)) {
-		gtk_list_store_insert(pl->store, &iter, pos);
-	}
-	gtk_tree_path_free(path);
-
-	gtk_list_store_set(pl->store, &iter, PL_ID, id, PL_POS, pos, PL_WEIGHT, PANGO_WEIGHT_NORMAL, -1);
-
-	for (i = 0; i < pl->n_columns; i++) {
-		str = song_attr_format(pl->columns[i], song);
-		gtk_list_store_set(pl->store, &iter, PL_COUNT + i, str, -1);
-		g_free(str);
-	}
-}
-
-void pl_free(struct playlist *pl)
-{
-	g_strfreev(pl->columns);
-	gtk_list_store_clear(pl->store);
 }
 
 gboolean counter_cb(gpointer data)
@@ -386,5 +280,69 @@ void sonatina_setvol(double vol)
 
 	snprintf(buf, sizeof(buf) - 1, "%d", (int) (vol * 100.0));
 	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_SETVOL, buf, NULL);
+}
+
+
+struct sonatina_tab *sonatina_tab_new(const char *name, const char *label, size_t size, TabInitFunc init, TabSetSourceFunc set_source, TabDestroyFunc destroy)
+{
+	struct sonatina_tab *tab;
+
+	tab = g_malloc(size);
+	tab->name = g_strdup(name);
+	tab->label = g_strdup(label);
+	tab->init = init;
+	tab->set_mpdsource = set_source;
+	tab->destroy = destroy;
+
+	return tab;
+}
+
+void sonatina_tab_destroy(struct sonatina_tab *tab)
+{
+	tab->destroy(tab);
+	g_free(tab->name);
+	g_free(tab->label);
+	g_free(tab);
+}
+
+gboolean sonatina_append_tab(struct sonatina_tab *tab)
+{
+	GObject *notebook;
+	GtkWidget *label;
+
+	if (!tab->init(tab)) {
+		MSG_ERROR("Failed to append tab %s", tab->name);
+		return FALSE;
+	}
+
+	sonatina.tabs = g_list_append(sonatina.tabs, tab);
+
+	notebook = gtk_builder_get_object(sonatina.gui, "notebook");
+	label = gtk_label_new(tab->label);
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), tab->widget, label);
+
+	return TRUE;
+}
+
+gboolean sonatina_remove_tab(const char *name)
+{
+	GList *cur;
+	struct sonatina_tab *tab;
+	gint i;
+	GObject *notebook;
+
+	for (cur = sonatina.tabs, i = 0; cur; cur = cur->next, i++) {
+		tab = (struct sonatina_tab *) cur->data;
+		if (!g_strcmp0(tab->name, name)) {
+			notebook = gtk_builder_get_object(sonatina.gui, "notebook");
+			gtk_notebook_remove_page(GTK_NOTEBOOK(notebook), i);
+			sonatina.tabs = g_list_remove_link(sonatina.tabs, cur);
+			g_free(cur);
+			sonatina_tab_destroy(tab);
+			return TRUE;
+		}
+	}
+
+	return FALSE;
 }
 

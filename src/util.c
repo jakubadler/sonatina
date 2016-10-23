@@ -46,3 +46,26 @@ int printmsg(int level, const char *format, ...)
 	return 0;
 }
 
+GtkBuilder *load_tab_ui(const char *name)
+{
+	GtkBuilder *ui;
+	gchar *uifile;
+	gchar *uipath;
+	gint err;
+
+	uifile = g_strdup_printf("%s.ui", name);
+	uipath = g_build_filename(DATADIR, PROG, uifile, NULL);
+	g_free(uifile);
+
+	ui = gtk_builder_new();
+	MSG_INFO("loading ui file %s", uipath);
+	err = gtk_builder_add_from_file(ui, uipath, NULL);
+	g_free(uipath);
+
+	if (err == 0) {
+		g_object_unref(G_OBJECT(ui));
+		return NULL;
+	}
+
+	return ui;
+}

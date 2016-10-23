@@ -4,7 +4,7 @@ install: ${PROG}.desktop
 	mkdir -p ${DATADIR}/applications
 	cp -f ${PROG}.desktop ${DATADIR}/applications/${PROG}.desktop
 	mkdir -p ${DATADIR}/${PROG}
-	cp -f ${PROG}.ui ${DATADIR}/${PROG}/${PROG}.ui
+	cp -f *.ui ${DATADIR}/${PROG}/
 
 uninstall:
 	rm -f ${DATADIR}/applications/${PROG}.desktop

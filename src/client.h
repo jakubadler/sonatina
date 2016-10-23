@@ -18,7 +18,24 @@ enum mpd_cmd_type {
 	MPD_CMD_SEEKCUR,
 	MPD_CMD_SETVOL,
 	MPD_CMD_PLINFO,
-	MPD_CMD_CLOSE
+	MPD_CMD_CLOSE,
+	MPD_CMD_COUNT
+};
+
+union mpd_cmd_answer {
+	void *ptr;
+	struct mpd_song *song; /* MPD_CMD_CURRENTSONG */
+	struct mpd_status *status; /* MPD_CMD_STATUS */
+	struct mpd_stats *stats; /* MPD_CMD_STATS */
+	struct { struct mpd_song *song; GList *list; } plinfo; /* MPD_CMD_PLINFO */
+	int idle; /* MPD_CMD_IDLE */
+	gboolean ok;
+};
+
+struct mpd_cmd_cb {
+	void (*cb)(union mpd_cmd_answer *, void *);
+	void *data;
+	struct mpd_cmd_cb *next;
 };
 
 /**
@@ -30,16 +47,7 @@ struct mpd_source {
 	struct mpd_async *async;
 	struct mpd_parser *parser;
 	GQueue pending;
-};
-
-union mpd_cmd_answer {
-	void *ptr;
-	struct mpd_song *song; /* MPD_CMD_CURRENTSONG */
-	struct mpd_status *status; /* MPD_CMD_STATUS */
-	struct mpd_stats *stats; /* MPD_CMD_STATS */
-	struct { struct mpd_song *song; GList *list; } plinfo; /* MPD_CMD_PLINFO */
-	int idle; /* MPD_CMD_IDLE */
-	gboolean ok;
+	struct mpd_cmd_cb *cbs[MPD_CMD_COUNT];
 };
 
 /**
@@ -155,5 +163,16 @@ gboolean mpd_dispatch(GSource *source, GSourceFunc callback, gpointer data);
   @return TRUE when command was sent, FALSE otherwise.
   */
 gboolean mpd_send_cmd(GSource *source, enum mpd_cmd_type cmd, ...);
+
+/**
+  @brief Register a callback that will be called when an answer to a comand is
+  received in addition to the command's own process function.
+  @param source MPD source
+  @param cmd Command type
+  @param cb Callback function
+  */
+void mpd_source_register(GSource *source, enum mpd_cmd_type cmd, void (*cb)(union mpd_cmd_answer *, void *), void *data);
+
+struct mpd_cmd_cb *mpd_cmd_cb_append(struct mpd_cmd_cb *list, void (*cb)(union mpd_cmd_answer *, void *), void *data);
 
 #endif

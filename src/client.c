@@ -194,20 +194,17 @@ void cmd_process_idle(union mpd_cmd_answer *answer)
 	if (answer->idle & MPD_CHANGED_PL) {
 		mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PLINFO, NULL);
 	}
+	if (answer->idle & MPD_CHANGED_PLAYER) {
+		mpd_send_cmd(sonatina.mpdsource, MPD_CMD_CURRENTSONG, NULL);
+	}
 }
 
 void cmd_process_plinfo(union mpd_cmd_answer *answer)
 {
-	GList *cur;
-
 	if (answer->plinfo.song) {
 		answer->plinfo.list = g_list_prepend(answer->plinfo.list, answer->plinfo.song);
 	}
 	answer->plinfo.list = g_list_reverse(answer->plinfo.list);
-	sonatina_update_pl(NULL);
-	for (cur = answer->plinfo.list; cur; cur = cur->next) {
-		sonatina_update_pl(cur->data);
-	}
 }
 
 gboolean parse_pair_status(union mpd_cmd_answer *answer, const struct mpd_pair *pair)
@@ -305,6 +302,7 @@ gboolean mpd_recv(struct mpd_source *source)
 	struct mpd_pair pair;
 	gboolean end = FALSE;
 	gboolean success = FALSE;
+	struct mpd_cmd_cb *cur;
 
 	cmd = g_queue_peek_head(&source->pending);
 	if (!cmd) {
@@ -349,8 +347,13 @@ gboolean mpd_recv(struct mpd_source *source)
 		}
 	}
 
-	if (success && cmd->process) {
-		cmd->process(&cmd->answer);
+	if (success) {
+		if (cmd->process) {
+			cmd->process(&cmd->answer);
+		}
+		for (cur = source->cbs[cmd->type]; cur; cur = cur->next) {
+			cur->cb(&cmd->answer, cur->data);
+		}
 	}
 	mpd_cmd_free(cmd);
 	g_queue_pop_head(&source->pending);
@@ -442,6 +445,7 @@ GSource *mpd_source_new(int fd)
 	GSource *source;
 	struct mpd_source *mpdsource;
 	struct mpd_cmd *greeting;
+	int i;
 
 	source = g_source_new(&mpdsourcefuncs, sizeof(struct mpd_source));
 	mpdsource = (struct mpd_source *) source;
@@ -455,6 +459,10 @@ GSource *mpd_source_new(int fd)
 	greeting = mpd_cmd_new(MPD_CMD_NONE);
 	g_queue_push_tail(&mpdsource->pending, greeting);
 
+	for (i = 0; i < MPD_CMD_COUNT; i++) {
+		mpdsource->cbs[i] = NULL;
+	}
+
 	return source;
 }
 
@@ -462,6 +470,15 @@ void mpd_source_close(GSource *source)
 {
 	struct mpd_source *mpdsource = (struct mpd_source *) source;
 	struct mpd_cmd *cmd;
+	int i;
+	struct mpd_cmd_cb *cur, *next;
+
+	for (i = 0; i < MPD_CMD_COUNT; i++) {
+		for (cur = mpdsource->cbs[i]; cur; cur = next) {
+			next = cur->next;
+			g_free(cur);
+		}
+	}
 
 	close(mpd_async_get_fd(mpdsource->async));
 	mpd_async_free(mpdsource->async);
@@ -477,3 +494,29 @@ void mpd_source_close(GSource *source)
 	g_source_unref(source);
 }
 
+void mpd_source_register(GSource *source, enum mpd_cmd_type cmd, void (*cb)(union mpd_cmd_answer *, void *), void *data)
+{
+	struct mpd_source *mpdsource = (struct mpd_source *) source;
+
+	mpdsource->cbs[cmd] = mpd_cmd_cb_append(mpdsource->cbs[cmd], cb, data);
+}
+
+struct mpd_cmd_cb *mpd_cmd_cb_append(struct mpd_cmd_cb *list, void (*cb)(union mpd_cmd_answer *, void *), void *data)
+{
+	struct mpd_cmd_cb *new;
+	struct mpd_cmd_cb *cur;
+
+	new = g_malloc(sizeof(struct mpd_cmd_cb));
+	new->next = NULL;
+	new->cb = cb;
+	new->data = data;
+
+	if (!list) {
+		return new;
+	}
+
+	for (cur = list; cur->next; cur = cur->next);
+	cur->next = new;
+
+	return list;
+}

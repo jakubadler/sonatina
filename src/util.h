@@ -1,6 +1,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include <gtk/gtk.h>
+
 enum {
 	LEVEL_DEBUG,
 	LEVEL_INFO,
@@ -23,5 +25,7 @@ int printmsg(int level, const char *format, ...);
 #define MSG_WARNING(...) { printmsg(LEVEL_WARNING, __VA_ARGS__); }
 #define MSG_ERROR(...) { printmsg(LEVEL_ERROR, __VA_ARGS__); }
 #define MSG_FATAL(...) { printmsg(LEVEL_FATAL, __VA_ARGS__); }
+
+GtkBuilder *load_tab_ui(const char *name);
 
 #endif
