@@ -23,13 +23,22 @@ struct sonatina_instance {
 	GTimer *counter;
 };
 
+/**
+  Structure representing one tab in sonatina's notebook widget.
+  */
 struct sonatina_tab {
-	gchar *name;
-	gchar *label;
-	GtkWidget *widget;
-	gboolean (*init)(struct sonatina_tab *);
-	void (*set_mpdsource)(struct sonatina_tab *, GSource *);
-	void (*destroy)(struct sonatina_tab *);
+	gchar *name; /** Internal name of the tab */
+	gchar *label; /** Human-readable name of the tab that will be displayed as the tab's label */
+	GtkWidget *widget; /** Top-level widget of the tab */
+	gboolean (*init)(struct sonatina_tab *); /** Function to initialize tab;
+						   called when a tab is added to
+						   the notebook. Returns TRUE on
+						  success, FALSE otherwise. When
+						  succeeded, this function
+						  should set widget to a valid
+						  GtkWidget. */
+	void (*set_mpdsource)(struct sonatina_tab *, GSource *); /** Function called when sonatina's MPD connection is changed. */
+	void (*destroy)(struct sonatina_tab *); /** Cleanup function to free memory allocated by init function */
 };
 
 typedef gboolean (*TabInitFunc)(struct sonatina_tab *);

@@ -87,31 +87,31 @@ gint app_local_options_cb(GApplication *app, GVariantDict *dict, gpointer user_d
 void prev_cb(GtkWidget *w, gpointer data)
 {
 	MSG_DEBUG("prev_cb");
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PREV, NULL);
+	mpd_send(sonatina.mpdsource, MPD_CMD_PREV, NULL);
 }
 
 void next_cb(GtkWidget *w, gpointer data)
 {
 	MSG_DEBUG("next_cb");
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_NEXT, NULL);
+	mpd_send(sonatina.mpdsource, MPD_CMD_NEXT, NULL);
 }
 
 void play_cb(GtkWidget *w, gpointer data)
 {
 	MSG_DEBUG("play_cb");
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PLAY, NULL);
+	mpd_send(sonatina.mpdsource, MPD_CMD_PLAY, NULL);
 }
 
 void pause_cb(GtkWidget *w, gpointer data)
 {
 	MSG_DEBUG("pause_cb");
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PAUSE, NULL);
+	mpd_send(sonatina.mpdsource, MPD_CMD_PAUSE, NULL);
 }
 
 void stop_cb(GtkWidget *w, gpointer data)
 {
 	MSG_DEBUG("stop_cb");
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_STOP, NULL);
+	mpd_send(sonatina.mpdsource, MPD_CMD_STOP, NULL);
 }
 
 void volume_cb(GtkWidget *w, gpointer data)

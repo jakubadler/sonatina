@@ -91,6 +91,10 @@ const char *mpd_cmd_to_str(enum mpd_cmd_type cmd)
 		return "setvol";
 	case MPD_CMD_PLINFO:
 		return "playlistinfo";
+	case MPD_CMD_LIST:
+		return "list";
+	case MPD_CMD_LSINFO:
+		return "lsinfo";
 	default:
 		return NULL;
 	}
@@ -101,6 +105,7 @@ struct mpd_cmd *mpd_cmd_new(enum mpd_cmd_type type)
 	struct mpd_cmd *cmd;
 
 	cmd = g_malloc(sizeof(struct mpd_cmd));
+	cmd->args = NULL;
 	cmd->type = type;
 	cmd->parse_pair = NULL;
 	cmd->process = NULL;
@@ -167,6 +172,11 @@ void mpd_cmd_free(struct mpd_cmd *cmd)
 		break;
 	}
 
+	for (cur = cmd->args; cur; cur = cur->next) {
+		g_free(cur->data);
+	}
+	g_list_free(cmd->args);
+
 	g_free(cmd);
 }
 
@@ -189,13 +199,13 @@ void cmd_process_idle(union mpd_cmd_answer *answer)
 	if (answer->idle & MPD_CHANGED_PLAYER ||
 	    answer->idle & MPD_CHANGED_MIXER ||
 	    answer->idle & MPD_CHANGED_OPTIONS ) {
-		mpd_send_cmd(sonatina.mpdsource, MPD_CMD_STATUS, NULL);
+		mpd_send(sonatina.mpdsource, MPD_CMD_STATUS, NULL);
 	}
 	if (answer->idle & MPD_CHANGED_PL) {
-		mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PLINFO, NULL);
+		mpd_send(sonatina.mpdsource, MPD_CMD_PLINFO, NULL);
 	}
 	if (answer->idle & MPD_CHANGED_PLAYER) {
-		mpd_send_cmd(sonatina.mpdsource, MPD_CMD_CURRENTSONG, NULL);
+		mpd_send(sonatina.mpdsource, MPD_CMD_CURRENTSONG, NULL);
 	}
 }
 
@@ -359,33 +369,35 @@ gboolean mpd_recv(struct mpd_source *source)
 	g_queue_pop_head(&source->pending);
 
 	if (g_queue_is_empty(&source->pending)) {
-		mpd_send_cmd((GSource *) source, MPD_CMD_IDLE, NULL);
+		mpd_send((GSource *) source, MPD_CMD_IDLE, NULL);
 	}
 
 	return TRUE;
 }
 
-gboolean mpd_send_cmd(GSource *source, enum mpd_cmd_type type, ...)
+gboolean mpd_cmd_send(GSource *source, struct mpd_cmd *cmd, ...)
 {
-	va_list ap;
-	struct mpd_source *mpdsource = (struct mpd_source *) source;
-	const char *cmd_str;
-	struct mpd_cmd *cmd;
-	struct mpd_cmd *pending;
+	va_list args;
 	gboolean retval;
 
-	if (!source) {
-		MSG_WARNING("invalid mpd source");
-		return FALSE;
-	}
+	va_start(args, cmd);
+	retval = mpd_cmd_send_v(source, cmd, args);
+	va_end(args);
 
-	cmd_str = mpd_cmd_to_str(type);
-	if (!cmd_str) {
-		MSG_WARNING("invalid command");
-		return FALSE;
-	}
+	return retval;
+}
 
-	cmd = mpd_cmd_new(type);
+gboolean mpd_cmd_send_v(GSource *source, struct mpd_cmd *cmd, va_list args)
+{
+	struct mpd_source *mpdsource = (struct mpd_source *) source;
+	va_list args2;
+	struct mpd_cmd *pending;
+	gboolean retval;
+	const char *arg;
+	const char *cmd_str;
+
+	cmd_str = mpd_cmd_to_str(cmd->type);
+
 	pending = g_queue_peek_tail(&mpdsource->pending);
 
 	if (pending && pending->type == MPD_CMD_IDLE) {
@@ -395,13 +407,43 @@ gboolean mpd_send_cmd(GSource *source, enum mpd_cmd_type type, ...)
 
 	MSG_INFO("sending MPD command %s", cmd_str);
 
-	va_start(ap, type);
-	retval = mpd_async_send_command_v(mpdsource->async, cmd_str, ap);
-	va_end(ap);
+	va_copy(args2, args);
+	retval = mpd_async_send_command_v(mpdsource->async, cmd_str, args);
 
-	if (retval) {
-		g_queue_push_tail(&mpdsource->pending, cmd);
+	if (!retval) {
+		va_end(args2);
+		return FALSE;
 	}
+
+	while ((arg = va_arg(args2, const char *)) != NULL) {
+		cmd->args = g_list_prepend(cmd->args, g_strdup(arg));
+	}
+	cmd->args = g_list_reverse(cmd->args);
+	g_queue_push_tail(&mpdsource->pending, cmd);
+	va_end(args2);
+
+	return TRUE;
+}
+
+gboolean mpd_send(GSource *source, enum mpd_cmd_type type, ...)
+{
+	va_list args;
+	const char *cmd_str;
+	struct mpd_cmd *cmd;
+	gboolean retval;
+
+	g_assert(source != NULL);
+
+	cmd_str = mpd_cmd_to_str(type);
+	if (!cmd_str) {
+		MSG_WARNING("invalid command");
+		return FALSE;
+	}
+
+	cmd = mpd_cmd_new(type);
+	va_start(args, type);
+	retval = mpd_cmd_send_v(source, cmd, args);
+	va_end(args);
 
 	return retval;
 }

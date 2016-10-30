@@ -95,9 +95,9 @@ gboolean sonatina_connect(const char *host, int port)
 		tab->set_mpdsource(tab, sonatina.mpdsource);
 	}
 
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_STATUS, NULL);
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PLINFO, NULL);
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_CURRENTSONG, NULL);
+	mpd_send(sonatina.mpdsource, MPD_CMD_STATUS, NULL);
+	mpd_send(sonatina.mpdsource, MPD_CMD_PLINFO, NULL);
+	mpd_send(sonatina.mpdsource, MPD_CMD_CURRENTSONG, NULL);
 
 	return TRUE;
 }
@@ -110,7 +110,7 @@ void sonatina_disconnect()
 		MSG_WARNING("sonatina_disconnect(): not connected");
 		return;
 	}
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_CLOSE, NULL);
+	mpd_send(sonatina.mpdsource, MPD_CMD_CLOSE, NULL);
 	mpd_source_close(sonatina.mpdsource);
 
 	sonatina.mpdsource = NULL;
@@ -259,10 +259,10 @@ void sonatina_play(int pos)
 	char buf[24];
 
 	if (pos < 0) {
-		mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PLAY, NULL);
+		mpd_send(sonatina.mpdsource, MPD_CMD_PLAY, NULL);
 	} else {
 		snprintf(buf, sizeof(buf) - 1, "%d", pos);
-		mpd_send_cmd(sonatina.mpdsource, MPD_CMD_PLAY, buf, NULL);
+		mpd_send(sonatina.mpdsource, MPD_CMD_PLAY, buf, NULL);
 	}
 }
 
@@ -271,7 +271,7 @@ void sonatina_seek(int time)
 	char buf[24];
 
 	snprintf(buf, sizeof(buf) - 1, "%d", time);
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_SEEKCUR, buf, NULL);
+	mpd_send(sonatina.mpdsource, MPD_CMD_SEEKCUR, buf, NULL);
 }
 
 void sonatina_setvol(double vol)
@@ -279,7 +279,7 @@ void sonatina_setvol(double vol)
 	char buf[24];
 
 	snprintf(buf, sizeof(buf) - 1, "%d", (int) (vol * 100.0));
-	mpd_send_cmd(sonatina.mpdsource, MPD_CMD_SETVOL, buf, NULL);
+	mpd_send(sonatina.mpdsource, MPD_CMD_SETVOL, buf, NULL);
 }
 
 

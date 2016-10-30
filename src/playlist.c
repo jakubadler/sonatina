@@ -79,6 +79,9 @@ gboolean pl_tab_init(struct sonatina_tab *tab)
 
 void pl_tab_set_source(struct sonatina_tab *tab, GSource *source)
 {
+	if (!source)
+		return;
+
 	mpd_source_register(source, MPD_CMD_CURRENTSONG, pl_process_song, tab);
 	mpd_source_register(source, MPD_CMD_PLINFO, pl_process_pl, tab);
 }

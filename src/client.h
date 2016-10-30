@@ -19,6 +19,8 @@ enum mpd_cmd_type {
 	MPD_CMD_SETVOL,
 	MPD_CMD_PLINFO,
 	MPD_CMD_CLOSE,
+	MPD_CMD_LIST,
+	MPD_CMD_LSINFO,
 	MPD_CMD_COUNT
 };
 
@@ -55,6 +57,7 @@ struct mpd_source {
   */
 struct mpd_cmd {
 	enum mpd_cmd_type type;
+	GList *args;
 	union mpd_cmd_answer answer;
 	gboolean (*parse_pair)(union mpd_cmd_answer *answer,
 			const struct mpd_pair *pair); /** Function to parse single pair. Called each time a pair is received */
@@ -78,6 +81,7 @@ const char *mpd_cmd_to_str(enum mpd_cmd_type cmd);
 /**
   @brief Create new mpd command.
   @param type Type of the new command.
+  @param ... NULL terminated list of command arguments.
   @returns Newly allocated command that should be freed with @a mpd_cmd_free().
   */
 struct mpd_cmd *mpd_cmd_new(enum mpd_cmd_type type);
@@ -158,11 +162,29 @@ gboolean mpd_dispatch(GSource *source, GSourceFunc callback, gpointer data);
 /**
   @brief Send command to MPD server.
   @param source MPD source connected to a MPD server.
-  @param cmd Type of command
+  @param cmd Command to send.
   @param ... List of command arguments terminated with NULL.
-  @return TRUE when command was sent, FALSE otherwise.
+  @returns TRUE when command was sent, FALSE otherwise.
   */
-gboolean mpd_send_cmd(GSource *source, enum mpd_cmd_type cmd, ...);
+gboolean mpd_cmd_send(GSource *source, struct mpd_cmd *cmd, ...);
+
+/**
+  va_list version of @a mpd_cmd_send();
+  @param source MPD source connected to a MPD server.
+  @param cmd Command to send.
+  @param ... List of command arguments terminated with NULL.
+  @returns TRUE when command was sent, FALSE otherwise.
+  */
+gboolean mpd_cmd_send_v(GSource *source, struct mpd_cmd *cmd, va_list args);
+
+/**
+  Create and send MPD command with arguments.
+  @param source MPD source connected to a MPD server.
+  @param type Command type.
+  @param ... NULL terminated list of arguments.
+  @returns TRUE when command was sent, FALSE otherwise.
+  */
+gboolean mpd_send(GSource *source, enum mpd_cmd_type type, ...);
 
 /**
   @brief Register a callback that will be called when an answer to a comand is
