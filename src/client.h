@@ -34,8 +34,10 @@ union mpd_cmd_answer {
 	gboolean ok;
 };
 
+typedef void (*CMDCallback)(const GList *args, union mpd_cmd_answer *, void *);
+
 struct mpd_cmd_cb {
-	void (*cb)(union mpd_cmd_answer *, void *);
+	CMDCallback cb;
 	void *data;
 	struct mpd_cmd_cb *next;
 };
@@ -193,8 +195,8 @@ gboolean mpd_send(GSource *source, enum mpd_cmd_type type, ...);
   @param cmd Command type
   @param cb Callback function
   */
-void mpd_source_register(GSource *source, enum mpd_cmd_type cmd, void (*cb)(union mpd_cmd_answer *, void *), void *data);
+void mpd_source_register(GSource *source, enum mpd_cmd_type cmd, CMDCallback cb, void *data);
 
-struct mpd_cmd_cb *mpd_cmd_cb_append(struct mpd_cmd_cb *list, void (*cb)(union mpd_cmd_answer *, void *), void *data);
+struct mpd_cmd_cb *mpd_cmd_cb_append(struct mpd_cmd_cb *list, CMDCallback cb, void *data);
 
 #endif

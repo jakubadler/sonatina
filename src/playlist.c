@@ -163,7 +163,7 @@ void playlist_clicked_cb(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn *
 	sonatina_play(pos);
 }
 
-void pl_process_song(union mpd_cmd_answer *answer, void *data)
+void pl_process_song(const GList *args, union mpd_cmd_answer *answer, void *data)
 {
 	struct pl_tab *tab = (struct pl_tab *) data;
 	int pos;
@@ -176,7 +176,7 @@ void pl_process_song(union mpd_cmd_answer *answer, void *data)
 	pl_set_active(tab, pos);
 }
 
-void pl_process_pl(union mpd_cmd_answer *answer, void *data)
+void pl_process_pl(const GList *args, union mpd_cmd_answer *answer, void *data)
 {
 	GList *cur;
 	struct mpd_song *song;

@@ -362,7 +362,7 @@ gboolean mpd_recv(struct mpd_source *source)
 			cmd->process(&cmd->answer);
 		}
 		for (cur = source->cbs[cmd->type]; cur; cur = cur->next) {
-			cur->cb(&cmd->answer, cur->data);
+			cur->cb(cmd->args, &cmd->answer, cur->data);
 		}
 	}
 	mpd_cmd_free(cmd);
@@ -536,14 +536,14 @@ void mpd_source_close(GSource *source)
 	g_source_unref(source);
 }
 
-void mpd_source_register(GSource *source, enum mpd_cmd_type cmd, void (*cb)(union mpd_cmd_answer *, void *), void *data)
+void mpd_source_register(GSource *source, enum mpd_cmd_type cmd, CMDCallback cb, void *data)
 {
 	struct mpd_source *mpdsource = (struct mpd_source *) source;
 
 	mpdsource->cbs[cmd] = mpd_cmd_cb_append(mpdsource->cbs[cmd], cb, data);
 }
 
-struct mpd_cmd_cb *mpd_cmd_cb_append(struct mpd_cmd_cb *list, void (*cb)(union mpd_cmd_answer *, void *), void *data)
+struct mpd_cmd_cb *mpd_cmd_cb_append(struct mpd_cmd_cb *list, CMDCallback cb, void *data)
 {
 	struct mpd_cmd_cb *new;
 	struct mpd_cmd_cb *cur;
