@@ -136,6 +136,12 @@ struct mpd_cmd *mpd_cmd_new(enum mpd_cmd_type type)
 		cmd->answer.plinfo.song = NULL;
 		cmd->answer.plinfo.list = NULL;
 		break;
+	case MPD_CMD_LSINFO:
+		cmd->parse_pair = parse_pair_lsinfo;
+		cmd->process = cmd_process_lsinfo;
+		cmd->answer.lsinfo.entity = NULL;
+		cmd->answer.lsinfo.list = NULL;
+		break;
 	default:
 		break;
 	}
@@ -167,6 +173,12 @@ void mpd_cmd_free(struct mpd_cmd *cmd)
 			mpd_song_free(cur->data);
 		}
 		g_list_free(cmd->answer.plinfo.list);
+		break;
+	case MPD_CMD_LSINFO:
+		for (cur = cmd->answer.lsinfo.list; cur; cur = cur->next) {
+			mpd_entity_free(cur->data);
+		}
+		g_list_free(cmd->answer.lsinfo.list);
 		break;
 	default:
 		break;
@@ -217,6 +229,14 @@ void cmd_process_plinfo(union mpd_cmd_answer *answer)
 	answer->plinfo.list = g_list_reverse(answer->plinfo.list);
 }
 
+void cmd_process_lsinfo(union mpd_cmd_answer *answer)
+{
+	if (answer->lsinfo.entity) {
+		answer->lsinfo.list = g_list_prepend(answer->lsinfo.list, answer->lsinfo.entity);
+	}
+	answer->lsinfo.list = g_list_reverse(answer->lsinfo.list);
+}
+
 gboolean parse_pair_status(union mpd_cmd_answer *answer, const struct mpd_pair *pair)
 {
 	if (!(answer->status)) {
@@ -254,12 +274,32 @@ gboolean parse_pair_plsong(union mpd_cmd_answer *answer, const struct mpd_pair *
 			MSG_ERROR("couldn't allocate song");
 			return FALSE;
 		}
-	}
-	if (!mpd_song_feed(answer->song, pair)) {
+	} else if (!mpd_song_feed(answer->plinfo.song, pair)) {
 		/* beginning of a new song */
 		answer->plinfo.list = g_list_prepend(answer->plinfo.list, answer->plinfo.song);
 		answer->plinfo.song = mpd_song_begin(pair);
 		if (!answer->plinfo.song) {
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+
+gboolean parse_pair_lsinfo(union mpd_cmd_answer *answer, const struct mpd_pair *pair)
+{
+	if (!answer->lsinfo.entity) {
+		/* first pair of a directory */
+		answer->lsinfo.entity = mpd_entity_begin(pair);
+		if (!answer->lsinfo.entity) {
+			MSG_ERROR("couldn't allocate directory");
+			return FALSE;
+		}
+	} else if (!mpd_entity_feed(answer->lsinfo.entity, pair)) {
+		/* beginning of a new directory */
+		answer->lsinfo.list = g_list_prepend(answer->lsinfo.list, answer->lsinfo.entity);
+		answer->lsinfo.entity = mpd_entity_begin(pair);
+		if (!answer->lsinfo.entity) {
 			return FALSE;
 		}
 	}
@@ -432,7 +472,10 @@ gboolean mpd_send(GSource *source, enum mpd_cmd_type type, ...)
 	struct mpd_cmd *cmd;
 	gboolean retval;
 
-	g_assert(source != NULL);
+	if (!source) {
+		MSG_ERROR("mpd_send(): invalid source");
+		return FALSE;
+	}
 
 	cmd_str = mpd_cmd_to_str(type);
 	if (!cmd_str) {

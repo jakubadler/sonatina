@@ -29,12 +29,19 @@ union mpd_cmd_answer {
 	struct mpd_song *song; /* MPD_CMD_CURRENTSONG */
 	struct mpd_status *status; /* MPD_CMD_STATUS */
 	struct mpd_stats *stats; /* MPD_CMD_STATS */
-	struct { struct mpd_song *song; GList *list; } plinfo; /* MPD_CMD_PLINFO */
+	struct {
+		struct mpd_song *song;
+		GList *list;
+	} plinfo; /* MPD_CMD_PLINFO */
+	struct {
+		struct mpd_entity *entity;
+		GList *list;
+	} lsinfo; /* MPD_CMD_LSINFO */
 	int idle; /* MPD_CMD_IDLE */
 	gboolean ok;
 };
 
-typedef void (*CMDCallback)(const GList *args, union mpd_cmd_answer *, void *);
+typedef void (*CMDCallback)(GList *args, union mpd_cmd_answer *, void *);
 
 struct mpd_cmd_cb {
 	CMDCallback cb;
@@ -104,12 +111,14 @@ void mpd_cmd_process_answer(struct mpd_cmd *cmd);
 gboolean parse_pair_status(union mpd_cmd_answer *answer, const struct mpd_pair *pair);
 gboolean parse_pair_song(union mpd_cmd_answer *answer, const struct mpd_pair *pair);
 gboolean parse_pair_plsong(union mpd_cmd_answer *answer, const struct mpd_pair *pair);
+gboolean parse_pair_lsinfo(union mpd_cmd_answer *answer, const struct mpd_pair *pair);
 gboolean parse_pair_idle(union mpd_cmd_answer *answer, const struct mpd_pair *pair);
 
 void cmd_process_song(union mpd_cmd_answer *answer);
 void cmd_process_status(union mpd_cmd_answer *answer);
 void cmd_process_idle(union mpd_cmd_answer *answer);
 void cmd_process_plinfo(union mpd_cmd_answer *answer);
+void cmd_process_lsinfo(union mpd_cmd_answer *answer);
 
 /**
   @brief Function to create TCP connection to the server.
