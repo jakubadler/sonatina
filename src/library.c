@@ -7,25 +7,40 @@
 #include "client.h"
 #include "util.h"
 
+const char *listing_icons[] = {
+	[LIBRARY_FS] = "folder",
+	[LIBRARY_GENRE] = "",
+	[LIBRARY_ARTIST] = "",
+	[LIBRARY_ALBUM] = "media-optical",
+	[LIBRARY_SONG] = "audio-x-generis"
+};
 
 gboolean library_tab_init(struct sonatina_tab *tab)
 {
 	struct library_tab *libtab = (struct library_tab *) tab;
 	GObject *tw;
+	GObject *header;
 
 	libtab->ui = load_tab_ui(tab->name);
 	if (!libtab->ui) {
 		return FALSE;
 	}
 
-	libtab->root = library_path_root(LIBRARY_FS);
-	libtab->path = libtab->root;
+	libtab->root = NULL;
+	libtab->path = NULL;
 
 	libtab->store = gtk_list_store_new(LIB_COL_COUNT, G_TYPE_STRING);
 	tw = gtk_builder_get_object(libtab->ui, "tw");
 	library_tw_set_columns(GTK_TREE_VIEW(tw));
 	gtk_tree_view_set_model(GTK_TREE_VIEW(tw), GTK_TREE_MODEL(libtab->store));
 	g_signal_connect(G_OBJECT(tw), "row-activated", G_CALLBACK(library_clicked_cb), libtab);
+
+	header = gtk_builder_get_object(libtab->ui, "header");
+	libtab->pathbar = sonatina_path_bar_new();
+	g_signal_connect(G_OBJECT(libtab->pathbar), "changed", G_CALLBACK(library_pathbar_changed), libtab);
+	gtk_box_pack_start(GTK_BOX(header), GTK_WIDGET(libtab->pathbar), FALSE, FALSE, 0);
+
+	library_set_listing(libtab, LIBRARY_FS);
 
 	/* set tab widget */
 	tab->widget = GTK_WIDGET(gtk_builder_get_object(libtab->ui, "top"));
@@ -107,6 +122,29 @@ void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 	g_free(uri);
 }
 
+void library_pathbar_changed(SonatinaPathBar *pathbar, gint selected, gpointer data)
+{
+	MSG_DEBUG("pathbar changed");
+	library_tab_open_pos((struct library_tab *) data, selected);
+}
+
+void library_set_listing(struct library_tab *tab, enum listing_type listing)
+{
+	const char *title;
+
+	library_path_free_all(tab->root);
+
+	tab->root = library_path_root(listing);
+	tab->path = tab->root;
+
+	if (listing == LIBRARY_FS) {
+		title = "Filesystem";
+	} else {
+		title = tab->root->name;
+	}
+	sonatina_path_bar_open_root(tab->pathbar, title, listing_icons[listing]);
+}
+
 void library_model_append_entity(GtkListStore *model, const struct mpd_entity *entity)
 {
 	GtkTreeIter iter;
@@ -175,11 +213,28 @@ struct library_path *library_path_root(enum listing_type listing)
 
 void library_path_free(struct library_path *path)
 {
+	if (!path) {
+		return;
+	}
+
 	if (path->name) {
 		g_free(path->name);
 	}
 
 	g_free(path);
+}
+
+void library_path_free_all(struct library_path *root)
+{
+	struct library_path *path;
+
+	if (!root) {
+		return;
+	}
+
+	for (path = root->next; path; path = path->next) {
+		library_path_free(path->parent);
+	}
 }
 
 void library_load(struct library_tab *tab)
@@ -210,11 +265,45 @@ void library_load(struct library_tab *tab)
 	}
 }
 
+void library_tab_open_dir(struct library_tab *tab, const char *name)
+{
+	struct library_path *path;
+	GObject *tw;
+
+	path = library_path_open(tab->path, name);
+	if (!path) {
+		return;
+	}
+	tab->path = path;
+	sonatina_path_bar_open(tab->pathbar, name, listing_icons[path->type]);
+	tw = gtk_builder_get_object(tab->ui, "tw");
+	gtk_widget_set_sensitive(GTK_WIDGET(tw), FALSE);
+	library_load(tab);
+}
+
+void library_tab_open_pos(struct library_tab *tab, int pos)
+{
+	struct library_path *path;
+	int i;
+	GObject *tw;
+
+	for (path = tab->root, i = 0; path; path = path->next, i++) {
+		if (i == pos) break;
+	}
+
+	if (!path) {
+		return;
+	}
+	tab->path = path;
+	tw = gtk_builder_get_object(tab->ui, "tw");
+	gtk_widget_set_sensitive(GTK_WIDGET(tw), FALSE);
+	library_load(tab);
+}
+
 void library_clicked_cb(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn *col, struct library_tab *tab)
 {
 	GtkTreeIter iter;
 	gchar *name;
-	struct library_path *libpath;
 
 	if (!gtk_tree_model_get_iter(GTK_TREE_MODEL(tab->store), &iter, path)) {
 		MSG_WARNING("library dir item vanished");
@@ -222,12 +311,7 @@ void library_clicked_cb(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn *c
 	}
 
 	gtk_tree_model_get(GTK_TREE_MODEL(tab->store), &iter, LIB_COL_NAME, &name, -1);
-	gtk_widget_set_sensitive(GTK_WIDGET(tw), FALSE);
-	libpath = library_path_open(tab->path, name);
-	if (libpath) {
-		tab->path = libpath;
-	}
-	library_load(tab);
+	library_tab_open_dir(tab, name);
 }
 
 struct library_path *library_path_open(struct library_path *parent, const char *name)
@@ -291,3 +375,4 @@ gchar *library_path_get_uri(const struct library_path *root, const struct librar
 
 	return g_string_free(uri, FALSE);
 }
+

@@ -15,6 +15,9 @@ split src/playlist.h
 tabnew src/library.c
 split src/library.h
 
+tabnew src/pathbar.c
+split src/pathbar.h
+
 tabnew src/client.c
 split src/client.h
 
