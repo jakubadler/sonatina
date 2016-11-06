@@ -95,6 +95,8 @@ const char *mpd_cmd_to_str(enum mpd_cmd_type cmd)
 		return "list";
 	case MPD_CMD_LSINFO:
 		return "lsinfo";
+	case MPD_CMD_FIND:
+		return "find";
 	default:
 		return NULL;
 	}
@@ -137,11 +139,16 @@ struct mpd_cmd *mpd_cmd_new(enum mpd_cmd_type type)
 		cmd->answer.plinfo.list = NULL;
 		break;
 	case MPD_CMD_LSINFO:
+	case MPD_CMD_FIND:
 		cmd->parse_pair = parse_pair_lsinfo;
 		cmd->process = cmd_process_lsinfo;
 		cmd->answer.lsinfo.entity = NULL;
 		cmd->answer.lsinfo.list = NULL;
 		break;
+	case MPD_CMD_LIST:
+		cmd->parse_pair = parse_pair_list;
+		cmd->process = cmd_process_list;
+		cmd->answer.list = NULL;
 	default:
 		break;
 	}
@@ -179,6 +186,9 @@ void mpd_cmd_free(struct mpd_cmd *cmd)
 			mpd_entity_free(cur->data);
 		}
 		g_list_free(cmd->answer.lsinfo.list);
+		break;
+	case MPD_CMD_LIST:
+		g_list_free_full(cmd->answer.list, g_free);
 		break;
 	default:
 		break;
@@ -235,6 +245,11 @@ void cmd_process_lsinfo(union mpd_cmd_answer *answer)
 		answer->lsinfo.list = g_list_prepend(answer->lsinfo.list, answer->lsinfo.entity);
 	}
 	answer->lsinfo.list = g_list_reverse(answer->lsinfo.list);
+}
+
+void cmd_process_list(union mpd_cmd_answer *answer)
+{
+	answer->list = g_list_reverse(answer->list);
 }
 
 gboolean parse_pair_status(union mpd_cmd_answer *answer, const struct mpd_pair *pair)
@@ -303,6 +318,13 @@ gboolean parse_pair_lsinfo(union mpd_cmd_answer *answer, const struct mpd_pair *
 			return FALSE;
 		}
 	}
+
+	return TRUE;
+}
+
+gboolean parse_pair_list(union mpd_cmd_answer *answer, const struct mpd_pair *pair)
+{
+	answer->list = g_list_prepend(answer->list, g_strdup(pair->value));
 
 	return TRUE;
 }

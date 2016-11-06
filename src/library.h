@@ -64,6 +64,7 @@ void library_path_free_all(struct library_path *path);
 void library_clicked_cb(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn *col, struct library_tab *tab);
 
 void library_model_append_entity(GtkListStore *model, const struct mpd_entity *entity);
+void library_model_append(GtkListStore *model, enum listing_type type, const char *name);
 
 /**
   Get path string for given path.

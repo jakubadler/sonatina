@@ -6,6 +6,7 @@
 #include "library.h"
 #include "client.h"
 #include "util.h"
+#include "songattr.h"
 
 const char *listing_icons[] = {
 	[LIBRARY_FS] = "folder",
@@ -40,7 +41,7 @@ gboolean library_tab_init(struct sonatina_tab *tab)
 	g_signal_connect(G_OBJECT(libtab->pathbar), "changed", G_CALLBACK(library_pathbar_changed), libtab);
 	gtk_box_pack_start(GTK_BOX(header), GTK_WIDGET(libtab->pathbar), FALSE, FALSE, 0);
 
-	library_set_listing(libtab, LIBRARY_FS);
+	library_set_listing(libtab, LIBRARY_ARTIST);
 
 	/* set tab widget */
 	tab->widget = GTK_WIDGET(gtk_builder_get_object(libtab->ui, "top"));
@@ -68,6 +69,7 @@ void library_tab_set_source(struct sonatina_tab *tab, GSource *source)
 	libtab->mpdsource = source;
 	mpd_source_register(source, MPD_CMD_LIST, library_list_cb, tab);
 	mpd_source_register(source, MPD_CMD_LSINFO, library_lsinfo_cb, tab);
+	mpd_source_register(source, MPD_CMD_FIND, library_lsinfo_cb, tab);
 
 	library_load(libtab);
 }
@@ -75,6 +77,34 @@ void library_tab_set_source(struct sonatina_tab *tab, GSource *source)
 void library_list_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 {
 	struct library_tab *tab = (struct library_tab *) data;
+	GList *cur;
+	GObject *tw;
+	enum listing_type type;
+
+	if (!args) {
+		MSG_WARNING("irrelevant list answer received");
+		return;
+	}
+
+	if (!g_strcmp0(args->data, "genre")) {
+		type = LIBRARY_GENRE;
+	} else if (!g_strcmp0(args->data, "artist")) {
+		type = LIBRARY_ARTIST;
+	} else if (!g_strcmp0(args->data, "album")) {
+		type = LIBRARY_ALBUM;
+	} else {
+		MSG_WARNING("invalid list answer received: %s", args->data);
+		type = LIBRARY_FS;
+	}
+
+	gtk_list_store_clear(tab->store);
+
+	for (cur = answer->list; cur; cur = cur->next) {
+		library_model_append(tab->store, type, cur->data);
+	}
+
+	tw = gtk_builder_get_object(tab->ui, "tw");
+	gtk_widget_set_sensitive(GTK_WIDGET(tw), TRUE);
 }
 
 void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
@@ -93,19 +123,24 @@ void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 		return;
 	}
 
-	if (tab->root->type != LIBRARY_FS) {
-		return;
-	}
-
-	uri_arg = g_list_nth_data(args, 0);
-	if (!uri_arg) {
-		uri_arg = "";
-	}
-
-	uri = library_path_get_uri(tab->root, tab->path);
-
-	MSG_DEBUG("received uri: %s; opened uri: %s", uri_arg, uri);
-	if (g_strcmp0(uri, uri_arg)) {
+	if (tab->root->type == LIBRARY_FS) {
+		uri_arg = g_list_nth_data(args, 0);
+		if (!uri_arg) {
+			uri_arg = "";
+		}
+        
+		uri = library_path_get_uri(tab->root, tab->path);
+        
+		MSG_DEBUG("received uri: %s; opened uri: %s", uri_arg, uri);
+		if (g_strcmp0(uri, uri_arg)) {
+			MSG_WARNING("irrelevant lsinfo answer received");
+			g_free(uri);
+			return;
+		}
+		g_free(uri);
+	} else if (tab->path->type == LIBRARY_SONG) {
+		/* TODO: check if songs are from relevant album? */
+	} else {
 		MSG_WARNING("irrelevant lsinfo answer received");
 		return;
 	}
@@ -119,7 +154,6 @@ void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 	tw = gtk_builder_get_object(tab->ui, "tw");
 	gtk_widget_set_sensitive(GTK_WIDGET(tw), TRUE);
 
-	g_free(uri);
 }
 
 void library_pathbar_changed(SonatinaPathBar *pathbar, gint selected, gpointer data)
@@ -147,24 +181,37 @@ void library_set_listing(struct library_tab *tab, enum listing_type listing)
 
 void library_model_append_entity(GtkListStore *model, const struct mpd_entity *entity)
 {
-	GtkTreeIter iter;
 	const struct mpd_directory *dir;
+	const struct mpd_song *song;
 	gchar *name;
+	enum listing_type type;
 
 	switch (mpd_entity_get_type(entity)) {
 	case MPD_ENTITY_TYPE_DIRECTORY:
+		type = LIBRARY_FS;
 		dir = mpd_entity_get_directory(entity);
 		name = g_path_get_basename(mpd_directory_get_path(dir));
 		break;
 	case MPD_ENTITY_TYPE_SONG:
+		type = LIBRARY_SONG;
+		song = mpd_entity_get_song(entity);
+		name = song_attr_format("%T", song);
+		break;
 	default:
 		name = g_strdup("unknown");
 		break;
 	}
 
+	library_model_append(model, type, name);
+	g_free(name);
+}
+
+void library_model_append(GtkListStore *model, enum listing_type type, const char *name)
+{
+	GtkTreeIter iter;
+
 	gtk_list_store_append(model, &iter);
 	gtk_list_store_set(model, &iter, LIB_COL_NAME, name, -1);
-	g_free(name);
 }
 
 void library_tab_destroy(struct sonatina_tab *tab)
@@ -249,16 +296,37 @@ void library_load(struct library_tab *tab)
 		g_free(uri);
 		break;
 	case LIBRARY_GENRE:
+		MSG_INFO("opening genre list");
 		mpd_send(tab->mpdsource, MPD_CMD_LIST, "genre", NULL);
 		break;
 	case LIBRARY_ARTIST:
+		MSG_INFO("opening artist list");
 		if (tab->path->parent && tab->path->parent->type == LIBRARY_GENRE) {
-			mpd_send(tab->mpdsource, MPD_CMD_LIST, "artist", "genre", tab->path->parent->name, NULL);
+			mpd_send(tab->mpdsource, MPD_CMD_LIST, "artist",
+					"genre", tab->path->name, NULL);
 		} else {
 			mpd_send(tab->mpdsource, MPD_CMD_LIST, "artist", NULL);
 		}
 		break;
 	case LIBRARY_ALBUM:
+		MSG_INFO("opening album list");
+		if (tab->path->parent && tab->path->parent->type == LIBRARY_ARTIST) {
+			if (tab->path->parent && tab->path->parent->type == LIBRARY_GENRE) {
+				mpd_send(tab->mpdsource, MPD_CMD_LIST, "album",
+						"artist", tab->path->name,
+						"genre", tab->path->parent->name, NULL);
+			} else {
+				MSG_DEBUG("listing albums for artist %s", tab->path->name);
+				mpd_send(tab->mpdsource, MPD_CMD_LIST, "album",
+						"artist", tab->path->name, NULL);
+			}
+		} else {
+			mpd_send(tab->mpdsource, MPD_CMD_LIST, "album", NULL);
+		}
+		break;
+	case LIBRARY_SONG:
+		MSG_INFO("opening song list");
+		mpd_send(tab->mpdsource, MPD_CMD_FIND, "album", tab->path->name, NULL);
 		break;
 	default:
 		break;
@@ -330,13 +398,13 @@ struct library_path *library_path_open(struct library_path *parent, const char *
 		type = parent->type + 1;
 	}
 
-	if (type >= LIBRARY_SONG) {
+	if (type > LIBRARY_SONG) {
 		return NULL;
 	}
 
 	path = g_malloc(sizeof(struct library_path));
 	path->type = type;
-	path->parent = path;
+	path->parent = parent;
 	path->next = NULL;
 	path->name = g_strdup(name);
 	path->selected = -1;

@@ -21,6 +21,7 @@ enum mpd_cmd_type {
 	MPD_CMD_CLOSE,
 	MPD_CMD_LIST,
 	MPD_CMD_LSINFO,
+	MPD_CMD_FIND,
 	MPD_CMD_COUNT
 };
 
@@ -37,6 +38,7 @@ union mpd_cmd_answer {
 		struct mpd_entity *entity;
 		GList *list;
 	} lsinfo; /* MPD_CMD_LSINFO */
+	GList *list; /* MPD_CMD_LIST */
 	int idle; /* MPD_CMD_IDLE */
 	gboolean ok;
 };
@@ -112,6 +114,7 @@ gboolean parse_pair_status(union mpd_cmd_answer *answer, const struct mpd_pair *
 gboolean parse_pair_song(union mpd_cmd_answer *answer, const struct mpd_pair *pair);
 gboolean parse_pair_plsong(union mpd_cmd_answer *answer, const struct mpd_pair *pair);
 gboolean parse_pair_lsinfo(union mpd_cmd_answer *answer, const struct mpd_pair *pair);
+gboolean parse_pair_list(union mpd_cmd_answer *answer, const struct mpd_pair *pair);
 gboolean parse_pair_idle(union mpd_cmd_answer *answer, const struct mpd_pair *pair);
 
 void cmd_process_song(union mpd_cmd_answer *answer);
@@ -119,6 +122,7 @@ void cmd_process_status(union mpd_cmd_answer *answer);
 void cmd_process_idle(union mpd_cmd_answer *answer);
 void cmd_process_plinfo(union mpd_cmd_answer *answer);
 void cmd_process_lsinfo(union mpd_cmd_answer *answer);
+void cmd_process_list(union mpd_cmd_answer *answer);
 
 /**
   @brief Function to create TCP connection to the server.
