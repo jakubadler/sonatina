@@ -7,13 +7,14 @@
 #include "client.h"
 #include "util.h"
 #include "songattr.h"
+#include "core.h"
 
 const char *listing_icons[] = {
 	[LIBRARY_FS] = "folder",
 	[LIBRARY_GENRE] = "",
 	[LIBRARY_ARTIST] = "",
 	[LIBRARY_ALBUM] = "media-optical",
-	[LIBRARY_SONG] = "audio-x-generis"
+	[LIBRARY_SONG] = "audio-x-generic"
 };
 
 gboolean library_tab_init(struct sonatina_tab *tab)
@@ -30,7 +31,7 @@ gboolean library_tab_init(struct sonatina_tab *tab)
 	libtab->root = NULL;
 	libtab->path = NULL;
 
-	libtab->store = gtk_list_store_new(LIB_COL_COUNT, G_TYPE_STRING);
+	libtab->store = gtk_list_store_new(LIB_COL_COUNT, G_TYPE_STRING, G_TYPE_ICON);
 	tw = gtk_builder_get_object(libtab->ui, "tw");
 	library_tw_set_columns(GTK_TREE_VIEW(tw));
 	gtk_tree_view_set_model(GTK_TREE_VIEW(tw), GTK_TREE_MODEL(libtab->store));
@@ -41,7 +42,7 @@ gboolean library_tab_init(struct sonatina_tab *tab)
 	g_signal_connect(G_OBJECT(libtab->pathbar), "changed", G_CALLBACK(library_pathbar_changed), libtab);
 	gtk_box_pack_start(GTK_BOX(header), GTK_WIDGET(libtab->pathbar), FALSE, FALSE, 0);
 
-	library_set_listing(libtab, LIBRARY_ARTIST);
+	library_set_listing(libtab, LIBRARY_FS);
 
 	/* set tab widget */
 	tab->widget = GTK_WIDGET(gtk_builder_get_object(libtab->ui, "top"));
@@ -54,8 +55,11 @@ void library_tw_set_columns(GtkTreeView *tw)
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *column;
 
-	renderer = gtk_cell_renderer_text_new();
+	renderer = gtk_cell_renderer_pixbuf_new();
+	column = gtk_tree_view_column_new_with_attributes("Icon", renderer, "gicon", LIB_COL_ICON, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(tw), column);
 
+	renderer = gtk_cell_renderer_text_new();
 	column = gtk_tree_view_column_new_with_attributes("Name", renderer, "text", LIB_COL_NAME, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(tw), column);
 }
@@ -184,6 +188,7 @@ void library_model_append_entity(GtkListStore *model, const struct mpd_entity *e
 	const struct mpd_directory *dir;
 	const struct mpd_song *song;
 	gchar *name;
+	gchar *format;
 	enum listing_type type;
 
 	switch (mpd_entity_get_type(entity)) {
@@ -195,7 +200,10 @@ void library_model_append_entity(GtkListStore *model, const struct mpd_entity *e
 	case MPD_ENTITY_TYPE_SONG:
 		type = LIBRARY_SONG;
 		song = mpd_entity_get_song(entity);
-		name = song_attr_format("%T", song);
+		format = g_key_file_get_string(sonatina.rc, "library", "format", NULL);
+		name = song_attr_format(format, song);
+		MSG_DEBUG("library_model_append_entity(): format '%s', name '%s'", format, name);
+		g_free(format);
 		break;
 	default:
 		name = g_strdup("unknown");
@@ -209,9 +217,11 @@ void library_model_append_entity(GtkListStore *model, const struct mpd_entity *e
 void library_model_append(GtkListStore *model, enum listing_type type, const char *name)
 {
 	GtkTreeIter iter;
+	GIcon *icon;
 
+	icon = g_icon_new_for_string(listing_icons[type], NULL);
 	gtk_list_store_append(model, &iter);
-	gtk_list_store_set(model, &iter, LIB_COL_NAME, name, -1);
+	gtk_list_store_set(model, &iter, LIB_COL_ICON, icon, LIB_COL_NAME, name, -1);
 }
 
 void library_tab_destroy(struct sonatina_tab *tab)
@@ -337,13 +347,19 @@ void library_tab_open_dir(struct library_tab *tab, const char *name)
 {
 	struct library_path *path;
 	GObject *tw;
+	const char *icon;
 
 	path = library_path_open(tab->path, name);
 	if (!path) {
 		return;
 	}
 	tab->path = path;
-	sonatina_path_bar_open(tab->pathbar, name, listing_icons[path->type]);
+	if (path->parent) {
+		icon = listing_icons[path->parent->type];
+	} else {
+		icon = listing_icons[path->type];
+	}
+	sonatina_path_bar_open(tab->pathbar, name, icon);
 	tw = gtk_builder_get_object(tab->ui, "tw");
 	gtk_widget_set_sensitive(GTK_WIDGET(tw), FALSE);
 	library_load(tab);

@@ -37,6 +37,8 @@ void sonatina_settings_default(GKeyFile *rc)
 		g_key_file_set_string(rc, "main", "subtitle", DEFAULT_MAIN_SUBTITLE);
 	if (!g_key_file_get_string(rc, "playlist", "format", NULL))
 		g_key_file_set_string(rc, "playlist", "format", DEFAULT_PLAYLIST_FORMAT);
+	if (!g_key_file_get_string(rc, "library", "format", NULL))
+		g_key_file_set_string(rc, "library", "format", DEFAULT_LIBRARY_FORMAT);
 }
 
 gboolean sonatina_settings_load()

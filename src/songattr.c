@@ -38,6 +38,17 @@ gchar *get_song_attr(int attr, const struct mpd_song *song)
 {
 	int num = 0;
 	gchar *buf;
+	const char *tag;
+
+	if (attr < MPD_TAG_COUNT) {
+		tag = mpd_song_get_tag(song, attr, 0);
+		if (tag) {
+			buf = g_strdup(tag);
+		} else {
+			buf = g_strdup("(unknown)");
+		}
+		return buf;
+	}
 
 	switch (attr) {
 	case SONG_ATTR_ID:
@@ -67,12 +78,8 @@ gchar *get_song_attr(int attr, const struct mpd_song *song)
 		buf = g_strdup(mpd_song_get_uri(song));
 		break;
 	default:
-		buf = NULL;
+		buf = g_strdup("(unknown)");
 		break;
-	}
-
-	if (attr < MPD_TAG_COUNT) {
-		buf = g_strdup(mpd_song_get_tag(song, attr, 0));
 	}
 
 	return buf;

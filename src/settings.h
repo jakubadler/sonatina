@@ -6,6 +6,7 @@
 #define DEFAULT_MAIN_TITLE "%T"
 #define DEFAULT_MAIN_SUBTITLE "%A - %B"
 #define DEFAULT_PLAYLIST_FORMAT "%N|%T|%A"
+#define DEFAULT_LIBRARY_FORMAT "%N %T"
 
 /**
   @brief Load default settings.

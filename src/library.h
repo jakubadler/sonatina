@@ -36,6 +36,7 @@ struct library_tab {
 
 enum lib_columns {
 	LIB_COL_NAME,
+	LIB_COL_ICON,
 	LIB_COL_COUNT
 };
 
