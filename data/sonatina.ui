@@ -31,7 +31,7 @@
                 <property name="valign">center</property>
                 <property name="hexpand">False</property>
                 <property name="vexpand">False</property>
-                <property name="stock">gtk-dialog-error</property>
+                <property name="icon_name">audio-x-generic</property>
                 <property name="icon_size">6</property>
               </object>
               <packing>

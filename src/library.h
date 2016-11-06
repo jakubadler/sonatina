@@ -72,4 +72,5 @@ void library_model_append(GtkListStore *model, enum listing_type type, const cha
   */
 gchar *library_path_get_uri(const struct library_path *root, const struct library_path *path);
 
+GtkWidget *library_selector_menu(struct library_tab *tab);
 #endif

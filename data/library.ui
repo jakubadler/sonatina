@@ -18,9 +18,7 @@
             <property name="receives_default">True</property>
             <property name="halign">start</property>
             <property name="valign">center</property>
-            <child>
-              <placeholder/>
-            </child>
+            <property name="use_popover">False</property>
           </object>
           <packing>
             <property name="expand">False</property>

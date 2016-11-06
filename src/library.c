@@ -17,11 +17,20 @@ const char *listing_icons[] = {
 	[LIBRARY_SONG] = "audio-x-generic"
 };
 
+const char *listing_labels[] = {
+	[LIBRARY_FS] = "Filesystem",
+	[LIBRARY_GENRE] = "Genre",
+	[LIBRARY_ARTIST] = "Artist",
+	[LIBRARY_ALBUM] = "Album",
+	[LIBRARY_SONG] = "Song"
+};
+
 gboolean library_tab_init(struct sonatina_tab *tab)
 {
 	struct library_tab *libtab = (struct library_tab *) tab;
 	GObject *tw;
 	GObject *header;
+	GObject *selector;
 
 	libtab->ui = load_tab_ui(tab->name);
 	if (!libtab->ui) {
@@ -42,7 +51,9 @@ gboolean library_tab_init(struct sonatina_tab *tab)
 	g_signal_connect(G_OBJECT(libtab->pathbar), "changed", G_CALLBACK(library_pathbar_changed), libtab);
 	gtk_box_pack_start(GTK_BOX(header), GTK_WIDGET(libtab->pathbar), FALSE, FALSE, 0);
 
-	library_set_listing(libtab, LIBRARY_FS);
+	selector = gtk_builder_get_object(libtab->ui, "selector");
+	gtk_menu_button_set_popup(GTK_MENU_BUTTON(selector), library_selector_menu(libtab));
+	library_set_listing(libtab, LIBRARY_ARTIST);
 
 	/* set tab widget */
 	tab->widget = GTK_WIDGET(gtk_builder_get_object(libtab->ui, "top"));
@@ -458,5 +469,34 @@ gchar *library_path_get_uri(const struct library_path *root, const struct librar
 	}
 
 	return g_string_free(uri, FALSE);
+}
+
+void library_selector_activate(GtkMenuItem *item, gpointer data)
+{
+	struct library_tab *tab = (struct library_tab *) data;
+	gint type = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(item), "listing"));
+
+	library_set_listing(tab, type);
+	library_load(tab);
+}
+
+GtkWidget *library_selector_menu(struct library_tab *tab)
+{
+	GtkWidget *menu;
+	GtkWidget *item;
+	int i;
+
+	menu = gtk_menu_new();
+
+	for (i = 0; i < LIBRARY_SONG; i++) {
+		item = gtk_menu_item_new_with_label(listing_labels[i]);
+		g_object_set_data(G_OBJECT(item), "listing", GINT_TO_POINTER(i));
+		g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(library_selector_activate), tab);
+		gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+	}
+
+	gtk_widget_show_all(menu);
+
+	return menu;
 }
 
