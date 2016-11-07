@@ -295,4 +295,19 @@ audio-volume-medium-symbolic</property>
       </object>
     </child>
   </object>
+  <menu id="menu">
+    <section>
+      <submenu>
+        <attribute name="label" translatable="yes">Connection</attribute>
+        <item>
+          <attribute name="label" translatable="yes">Disconnect</attribute>
+          <attribute name="action">app.disconnect</attribute>
+        </item>
+      </submenu>
+      <item>
+        <attribute name="label" translatable="yes">Quit</attribute>
+        <attribute name="action">app.quit</attribute>
+      </item>
+    </section>
+  </menu>
 </interface>

@@ -8,6 +8,7 @@
 #include "util.h"
 #include "songattr.h"
 #include "core.h"
+#include "gui.h"
 
 const char *listing_icons[] = {
 	[LIBRARY_FS] = "folder",
@@ -55,6 +56,8 @@ gboolean library_tab_init(struct sonatina_tab *tab)
 	gtk_menu_button_set_popup(GTK_MENU_BUTTON(selector), library_selector_menu(libtab));
 	library_set_listing(libtab, LIBRARY_ARTIST);
 
+	connect_popup(GTK_WIDGET(tw), NULL);
+
 	/* set tab widget */
 	tab->widget = GTK_WIDGET(gtk_builder_get_object(libtab->ui, "top"));
 
@@ -78,15 +81,22 @@ void library_tw_set_columns(GtkTreeView *tw)
 void library_tab_set_source(struct sonatina_tab *tab, GSource *source)
 {
 	struct library_tab *libtab = (struct library_tab *) tab;
+	GObject *selector;
 
-	g_assert(source != NULL);
-
-	libtab->mpdsource = source;
-	mpd_source_register(source, MPD_CMD_LIST, library_list_cb, tab);
-	mpd_source_register(source, MPD_CMD_LSINFO, library_lsinfo_cb, tab);
-	mpd_source_register(source, MPD_CMD_FIND, library_lsinfo_cb, tab);
-
-	library_load(libtab);
+	selector = gtk_builder_get_object(libtab->ui, "selector");
+	if (source) {
+		libtab->mpdsource = source;
+		mpd_source_register(source, MPD_CMD_LIST, library_list_cb, tab);
+		mpd_source_register(source, MPD_CMD_LSINFO, library_lsinfo_cb, tab);
+		mpd_source_register(source, MPD_CMD_FIND, library_lsinfo_cb, tab);
+		library_load(libtab);
+		gtk_widget_set_sensitive(GTK_WIDGET(selector), TRUE);
+		gtk_widget_set_sensitive(GTK_WIDGET(libtab->pathbar), TRUE);
+	} else {
+		gtk_widget_set_sensitive(GTK_WIDGET(selector), FALSE);
+		gtk_widget_set_sensitive(GTK_WIDGET(libtab->pathbar), FALSE);
+		gtk_list_store_clear(libtab->store);
+	}
 }
 
 void library_list_cb(GList *args, union mpd_cmd_answer *answer, void *data)

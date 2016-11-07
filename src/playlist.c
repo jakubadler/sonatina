@@ -5,6 +5,7 @@
 #include "songattr.h"
 #include "util.h"
 #include "client.h"
+#include "gui.h"
 
 gboolean pl_tab_init(struct sonatina_tab *tab)
 {
@@ -70,6 +71,7 @@ gboolean pl_tab_init(struct sonatina_tab *tab)
 	}
 
 	g_signal_connect(G_OBJECT(tw), "row-activated", G_CALLBACK(playlist_clicked_cb), NULL);
+	connect_popup(GTK_WIDGET(tw), NULL);
 
 	/* set tab widget */
 	tab->widget = GTK_WIDGET(gtk_builder_get_object(pltab->ui, "top"));
@@ -79,11 +81,14 @@ gboolean pl_tab_init(struct sonatina_tab *tab)
 
 void pl_tab_set_source(struct sonatina_tab *tab, GSource *source)
 {
-	if (!source)
-		return;
+	struct pl_tab *pltab = (struct pl_tab *) tab;
 
-	mpd_source_register(source, MPD_CMD_CURRENTSONG, pl_process_song, tab);
-	mpd_source_register(source, MPD_CMD_PLINFO, pl_process_pl, tab);
+	if (source) {
+		mpd_source_register(source, MPD_CMD_CURRENTSONG, pl_process_song, tab);
+		mpd_source_register(source, MPD_CMD_PLINFO, pl_process_pl, tab);
+	} else {
+		gtk_list_store_clear(pltab->store);
+	}
 }
 
 void pl_tab_destroy(struct sonatina_tab *tab)

@@ -104,11 +104,19 @@ gboolean sonatina_connect(const char *host, int port)
 
 void sonatina_disconnect()
 {
+	GList *cur;
+	struct sonatina_tab *tab;
+
 	MSG_DEBUG("sonatina_disconnect()");
 
 	if (!sonatina.mpdsource) {
 		MSG_WARNING("sonatina_disconnect(): not connected");
 		return;
+	}
+
+	for (cur = sonatina.tabs; cur; cur = cur->next) {
+		tab = cur->data;
+		tab->set_mpdsource(tab, NULL);
 	}
 	mpd_send(sonatina.mpdsource, MPD_CMD_CLOSE, NULL);
 	mpd_source_close(sonatina.mpdsource);

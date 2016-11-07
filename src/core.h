@@ -37,7 +37,16 @@ struct sonatina_tab {
 						  succeeded, this function
 						  should set widget to a valid
 						  GtkWidget. */
-	void (*set_mpdsource)(struct sonatina_tab *, GSource *); /** Function called when sonatina's MPD connection is changed. */
+	void (*set_mpdsource)(struct sonatina_tab *, GSource *); /** Function
+								   called when
+								   sonatina's
+								   MPD
+								   connection is
+								   changed.
+								   Setting MPD
+								   source to
+								   NULL means
+								   disconnect. */
 	void (*destroy)(struct sonatina_tab *); /** Cleanup function to free memory allocated by init function */
 };
 

@@ -9,7 +9,7 @@ SYSCONFDIR=	${PREFIX}/etc
 PROG=		sonatina
 LIBS=		libmpdclient gtk+-3.0
 CFLAGS=		-std=c99 -D_DEFAULT_SOURCE \
-		-Wall -Wextra -pedantic -Wno-unused-parameter \
+		-Wall -Wextra -pedantic -Wno-unused-parameter -Wno-missing-field-initializers \
 		-DDEBUG -g \
 		-DPROG=\"${PROG}\" \
 		-DDATADIR=\"${DATADIR}\" \
