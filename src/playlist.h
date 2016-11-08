@@ -18,7 +18,8 @@ enum pl_columns {
   */
 struct pl_tab {
 	struct sonatina_tab tab;
-	GtkBuilder *ui; /** GTK builder containing UI definitons of the playlist window */
+	GtkBuilder *ui; /** GTK builder containing UI definitons of the playlist
+			 tab */
 	size_t n_columns; /** Number of user-defined columns */
 	gchar **columns; /** Format of user-defined columns; NULL-terminated array of length n_columns */
 	GtkListStore *store; /** Contains internal coulumns and user-defined
@@ -33,7 +34,7 @@ struct pl_tab {
 gboolean pl_tab_init(struct sonatina_tab *tab);
 
 /**
-  @brief Set MPD source for a playlist tab.
+  @brief Set MPD source of a playlist tab.
   @param tab Playlist tab
   @param source MPD source or NULL when not connected.
   */

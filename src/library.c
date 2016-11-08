@@ -93,6 +93,7 @@ void library_tab_set_source(struct sonatina_tab *tab, GSource *source)
 		gtk_widget_set_sensitive(GTK_WIDGET(selector), TRUE);
 		gtk_widget_set_sensitive(GTK_WIDGET(libtab->pathbar), TRUE);
 	} else {
+		libtab->mpdsource = NULL;
 		gtk_widget_set_sensitive(GTK_WIDGET(selector), FALSE);
 		gtk_widget_set_sensitive(GTK_WIDGET(libtab->pathbar), FALSE);
 		gtk_list_store_clear(libtab->store);
@@ -251,6 +252,8 @@ void library_tab_destroy(struct sonatina_tab *tab)
 	struct library_path *path;
 
 	g_object_unref(G_OBJECT(libtab->ui));
+	g_object_unref(G_OBJECT(libtab->store));
+	g_object_unref(G_OBJECT(libtab->pathbar));
 
 	for (path = libtab->root; path; path = path->next) {
 		library_path_free(path);
@@ -315,53 +318,57 @@ void library_path_free_all(struct library_path *root)
 	}
 }
 
-void library_load(struct library_tab *tab)
+gboolean library_load(struct library_tab *tab)
 {
 	gchar *uri;
+	gboolean retval = FALSE;
 
 	switch (tab->path->type) {
 	case LIBRARY_FS:
 		uri = library_path_get_uri(tab->root, tab->path);
 		MSG_DEBUG("sending lsinfo %s", uri);
-		mpd_send(tab->mpdsource, MPD_CMD_LSINFO, uri, NULL);
+		retval = mpd_send(tab->mpdsource, MPD_CMD_LSINFO, uri, NULL);
 		g_free(uri);
 		break;
 	case LIBRARY_GENRE:
 		MSG_INFO("opening genre list");
-		mpd_send(tab->mpdsource, MPD_CMD_LIST, "genre", NULL);
+		retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "genre", NULL);
 		break;
 	case LIBRARY_ARTIST:
 		MSG_INFO("opening artist list");
 		if (tab->path->parent && tab->path->parent->type == LIBRARY_GENRE) {
-			mpd_send(tab->mpdsource, MPD_CMD_LIST, "artist",
+			retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "artist",
 					"genre", tab->path->name, NULL);
 		} else {
-			mpd_send(tab->mpdsource, MPD_CMD_LIST, "artist", NULL);
+			retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "artist", NULL);
 		}
 		break;
 	case LIBRARY_ALBUM:
 		MSG_INFO("opening album list");
 		if (tab->path->parent && tab->path->parent->type == LIBRARY_ARTIST) {
 			if (tab->path->parent && tab->path->parent->type == LIBRARY_GENRE) {
-				mpd_send(tab->mpdsource, MPD_CMD_LIST, "album",
+				retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "album",
 						"artist", tab->path->name,
 						"genre", tab->path->parent->name, NULL);
 			} else {
 				MSG_DEBUG("listing albums for artist %s", tab->path->name);
-				mpd_send(tab->mpdsource, MPD_CMD_LIST, "album",
+				retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "album",
 						"artist", tab->path->name, NULL);
 			}
 		} else {
-			mpd_send(tab->mpdsource, MPD_CMD_LIST, "album", NULL);
+			retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "album", NULL);
 		}
 		break;
 	case LIBRARY_SONG:
 		MSG_INFO("opening song list");
-		mpd_send(tab->mpdsource, MPD_CMD_FIND, "album", tab->path->name, NULL);
+		retval = mpd_send(tab->mpdsource, MPD_CMD_FIND, "album", tab->path->name, NULL);
 		break;
 	default:
+		retval = FALSE;
 		break;
 	}
+
+	return retval;
 }
 
 void library_tab_open_dir(struct library_tab *tab, const char *name)
@@ -447,18 +454,12 @@ struct library_path *library_path_open(struct library_path *parent, const char *
 	path->selected = -1;
 
 	if (parent->next) {
-		library_path_free(parent->next);
+		library_path_free_all(parent->next);
 	}
 
 	parent->next = path;
 
 	return path;
-}
-
-void library_path_close(struct library_path *path)
-{
-	path->parent->next = NULL;
-	library_path_free(path);
 }
 
 gchar *library_path_get_uri(const struct library_path *root, const struct library_path *path)
