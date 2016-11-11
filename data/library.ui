@@ -61,4 +61,16 @@
       </packing>
     </child>
   </object>
+  <menu id="menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Add</attribute>
+        <attribute name="action">library.add</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Replace</attribute>
+        <attribute name="action">library.replace</attribute>
+      </item>
+    </section>
+  </menu>
 </interface>

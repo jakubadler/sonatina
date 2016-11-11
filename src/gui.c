@@ -192,7 +192,10 @@ gboolean sonatina_click_cb(GtkWidget *w, GdkEventButton *event, GMenuModel *spec
 {
 	if (gdk_event_triggers_context_menu ((GdkEvent *) event) && event->type == GDK_BUTTON_PRESS) {
 		sonatina_popup_menu(w, event, specific);
-		return TRUE;
+		/*return FALSE;*/
+		/* Returning false here allows GtkTreeView to handle this event
+		 * and select the clicked row; not sure if this is a proper way
+		 * to do this. */
 	}
 	
 	return FALSE;

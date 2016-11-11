@@ -97,6 +97,12 @@ const char *mpd_cmd_to_str(enum mpd_cmd_type cmd)
 		return "lsinfo";
 	case MPD_CMD_FIND:
 		return "find";
+	case MPD_CMD_ADD:
+		return "add";
+	case MPD_CMD_FINDADD:
+		return "findadd";
+	case MPD_CMD_CLEAR:
+		return "clear";
 	default:
 		return NULL;
 	}
@@ -149,6 +155,7 @@ struct mpd_cmd *mpd_cmd_new(enum mpd_cmd_type type)
 		cmd->parse_pair = parse_pair_list;
 		cmd->process = cmd_process_list;
 		cmd->answer.list = NULL;
+		break;
 	default:
 		break;
 	}

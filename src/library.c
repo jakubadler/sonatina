@@ -26,12 +26,18 @@ const char *listing_labels[] = {
 	[LIBRARY_SONG] = "Song"
 };
 
+static GActionEntry library_actions[] = {
+	{ "add", library_add_action, NULL, NULL, NULL },
+	{ "replace", library_replace_action, NULL, NULL, NULL }
+};
+
 gboolean library_tab_init(struct sonatina_tab *tab)
 {
 	struct library_tab *libtab = (struct library_tab *) tab;
 	GObject *tw;
 	GObject *header;
 	GObject *selector;
+	GObject *menu;
 
 	libtab->ui = load_tab_ui(tab->name);
 	if (!libtab->ui) {
@@ -41,7 +47,7 @@ gboolean library_tab_init(struct sonatina_tab *tab)
 	libtab->root = NULL;
 	libtab->path = NULL;
 
-	libtab->store = gtk_list_store_new(LIB_COL_COUNT, G_TYPE_STRING, G_TYPE_ICON);
+	libtab->store = gtk_list_store_new(LIB_COL_COUNT, G_TYPE_STRING, G_TYPE_ICON, G_TYPE_STRING);
 	tw = gtk_builder_get_object(libtab->ui, "tw");
 	library_tw_set_columns(GTK_TREE_VIEW(tw));
 	gtk_tree_view_set_model(GTK_TREE_VIEW(tw), GTK_TREE_MODEL(libtab->store));
@@ -56,10 +62,12 @@ gboolean library_tab_init(struct sonatina_tab *tab)
 	gtk_menu_button_set_popup(GTK_MENU_BUTTON(selector), library_selector_menu(libtab));
 	library_set_listing(libtab, LIBRARY_ARTIST);
 
-	connect_popup(GTK_WIDGET(tw), NULL);
-
 	/* set tab widget */
 	tab->widget = GTK_WIDGET(gtk_builder_get_object(libtab->ui, "top"));
+
+	menu = gtk_builder_get_object(libtab->ui, "menu");
+	connect_popup(GTK_WIDGET(tw), G_MENU_MODEL(menu));
+	connect_popup(GTK_WIDGET(tab->widget), G_MENU_MODEL(menu));
 
 	return TRUE;
 }
@@ -82,8 +90,12 @@ void library_tab_set_source(struct sonatina_tab *tab, GSource *source)
 {
 	struct library_tab *libtab = (struct library_tab *) tab;
 	GObject *selector;
+	GObject *tw;
+	GSimpleActionGroup *actions;
 
 	selector = gtk_builder_get_object(libtab->ui, "selector");
+	tw = gtk_builder_get_object(libtab->ui, "tw");
+
 	if (source) {
 		libtab->mpdsource = source;
 		mpd_source_register(source, MPD_CMD_LIST, library_list_cb, tab);
@@ -92,11 +104,17 @@ void library_tab_set_source(struct sonatina_tab *tab, GSource *source)
 		library_load(libtab);
 		gtk_widget_set_sensitive(GTK_WIDGET(selector), TRUE);
 		gtk_widget_set_sensitive(GTK_WIDGET(libtab->pathbar), TRUE);
+
+		actions = g_simple_action_group_new();
+		g_action_map_add_action_entries(G_ACTION_MAP(actions), library_actions, G_N_ELEMENTS(library_actions), libtab);
+		gtk_widget_insert_action_group(GTK_WIDGET(tw), "library", G_ACTION_GROUP(actions));
 	} else {
 		libtab->mpdsource = NULL;
 		gtk_widget_set_sensitive(GTK_WIDGET(selector), FALSE);
 		gtk_widget_set_sensitive(GTK_WIDGET(libtab->pathbar), FALSE);
 		gtk_list_store_clear(libtab->store);
+
+		gtk_widget_insert_action_group(GTK_WIDGET(tw), "library", NULL);
 	}
 }
 
@@ -126,7 +144,7 @@ void library_list_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 	gtk_list_store_clear(tab->store);
 
 	for (cur = answer->list; cur; cur = cur->next) {
-		library_model_append(tab->store, type, cur->data);
+		library_model_append(tab->store, type, cur->data, NULL);
 	}
 
 	tw = gtk_builder_get_object(tab->ui, "tw");
@@ -211,20 +229,23 @@ void library_model_append_entity(GtkListStore *model, const struct mpd_entity *e
 	const struct mpd_song *song;
 	gchar *name;
 	gchar *format;
+	const char *uri = NULL;
 	enum listing_type type;
 
 	switch (mpd_entity_get_type(entity)) {
 	case MPD_ENTITY_TYPE_DIRECTORY:
 		type = LIBRARY_FS;
 		dir = mpd_entity_get_directory(entity);
-		name = g_path_get_basename(mpd_directory_get_path(dir));
+		uri = mpd_directory_get_path(dir);
+		name = g_path_get_basename(uri);
 		break;
 	case MPD_ENTITY_TYPE_SONG:
 		type = LIBRARY_SONG;
 		song = mpd_entity_get_song(entity);
 		format = g_key_file_get_string(sonatina.rc, "library", "format", NULL);
 		name = song_attr_format(format, song);
-		MSG_DEBUG("library_model_append_entity(): format '%s', name '%s'", format, name);
+		uri = mpd_song_get_uri(song);
+		MSG_DEBUG("library_model_append_entity(): format '%s', name '%s', uri: %s", format, name, uri);
 		g_free(format);
 		break;
 	default:
@@ -232,18 +253,18 @@ void library_model_append_entity(GtkListStore *model, const struct mpd_entity *e
 		break;
 	}
 
-	library_model_append(model, type, name);
+	library_model_append(model, type, name, uri);
 	g_free(name);
 }
 
-void library_model_append(GtkListStore *model, enum listing_type type, const char *name)
+void library_model_append(GtkListStore *model, enum listing_type type, const char *name, const char *uri)
 {
 	GtkTreeIter iter;
 	GIcon *icon;
 
 	icon = g_icon_new_for_string(listing_icons[type], NULL);
 	gtk_list_store_append(model, &iter);
-	gtk_list_store_set(model, &iter, LIB_COL_ICON, icon, LIB_COL_NAME, name, -1);
+	gtk_list_store_set(model, &iter, LIB_COL_ICON, icon, LIB_COL_NAME, name, LIB_COL_URI, uri, -1);
 }
 
 void library_tab_destroy(struct sonatina_tab *tab)
@@ -318,6 +339,8 @@ void library_path_free_all(struct library_path *root)
 	}
 }
 
+/* TODO: These two functions are very similar and could share some code. */
+
 gboolean library_load(struct library_tab *tab)
 {
 	gchar *uri;
@@ -362,6 +385,64 @@ gboolean library_load(struct library_tab *tab)
 	case LIBRARY_SONG:
 		MSG_INFO("opening song list");
 		retval = mpd_send(tab->mpdsource, MPD_CMD_FIND, "album", tab->path->name, NULL);
+		break;
+	default:
+		retval = FALSE;
+		break;
+	}
+
+	return retval;
+}
+
+gboolean library_add(struct library_tab *tab, const char *name)
+{
+	gchar *parent_uri;
+	GString *uri;
+	gboolean retval = FALSE;
+
+	switch (tab->path->type) {
+	case LIBRARY_FS:
+		parent_uri = library_path_get_uri(tab->root, tab->path);
+		uri = g_string_new(parent_uri);
+		g_string_append(uri, name);
+		MSG_DEBUG("sending add %s", uri);
+		retval = mpd_send(tab->mpdsource, MPD_CMD_ADD, name, NULL);
+		g_free(parent_uri);
+		g_string_free(uri, TRUE);
+		break;
+	case LIBRARY_GENRE:
+		MSG_INFO("adding genre %s", name);
+		retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "genre", name, NULL);
+		break;
+	case LIBRARY_ARTIST:
+		MSG_INFO("adding artist %s", name);
+		if (tab->path->parent && tab->path->parent->type == LIBRARY_GENRE) {
+			retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "artist", name,
+					"genre", tab->path->name, NULL);
+		} else {
+			retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "artist", name, NULL);
+		}
+		break;
+	case LIBRARY_ALBUM:
+		MSG_INFO("adding album %s", name);
+		if (tab->path->parent && tab->path->parent->type == LIBRARY_ARTIST) {
+			if (tab->path->parent && tab->path->parent->type == LIBRARY_GENRE) {
+				retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "album", name,
+						"artist", tab->path->name,
+						"genre", tab->path->parent->name, NULL);
+			} else {
+				MSG_DEBUG("adding album %s from artist %s", name, tab->path->name);
+				retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "album", name,
+						"artist", tab->path->name, NULL);
+			}
+		} else {
+			retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "album", name, NULL);
+		}
+		break;
+	case LIBRARY_SONG:
+		MSG_INFO("adding song %s", name);
+		//retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "album", tab->path->name, "file", name, NULL);
+		retval = mpd_send(tab->mpdsource, MPD_CMD_ADD, name, NULL);
 		break;
 	default:
 		retval = FALSE;
@@ -453,6 +534,10 @@ struct library_path *library_path_open(struct library_path *parent, const char *
 	path->name = g_strdup(name);
 	path->selected = -1;
 
+	if (!path) {
+		return NULL;
+	}
+
 	if (parent->next) {
 		library_path_free_all(parent->next);
 	}
@@ -509,5 +594,64 @@ GtkWidget *library_selector_menu(struct library_tab *tab)
 	gtk_widget_show_all(menu);
 
 	return menu;
+}
+
+gboolean library_add_selected(struct library_tab *tab, GtkTreeSelection *selection)
+{
+	GtkTreeModel *model;
+	GtkTreeIter iter;
+	GList *rows;
+	GList *cur;
+	gchar *name;
+	gchar *uri;
+	gboolean retval = TRUE;
+
+	rows = gtk_tree_selection_get_selected_rows(selection, &model);
+
+	for (cur = rows; cur; cur = cur->next) {
+		if (!gtk_tree_model_get_iter(model, &iter, cur->data)) {
+			continue;
+		}
+		gtk_tree_model_get(model, &iter, LIB_COL_NAME, &name, LIB_COL_URI, &uri, -1);
+		if (uri) {
+			retval = retval && library_add(tab, uri);
+		} else {
+			retval = retval && library_add(tab, name);
+		}
+		g_free(name);
+	}
+
+	g_list_free_full(rows, (GDestroyNotify) gtk_tree_path_free);
+
+	return retval;
+}
+
+void library_add_action(GSimpleAction *action, GVariant *param, gpointer data)
+{
+	struct library_tab *tab = (struct library_tab *) data;
+	GObject *tw;
+	GtkTreeSelection *select;
+
+	MSG_INFO("Add action activated");
+
+	tw = gtk_builder_get_object(tab->ui, "tw");
+	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(tw));
+
+	library_add_selected(tab, select);
+}
+
+void library_replace_action(GSimpleAction *action, GVariant *param, gpointer data)
+{
+	struct library_tab *tab = (struct library_tab *) data;
+	GObject *tw;
+	GtkTreeSelection *select;
+
+	MSG_INFO("Replace action activated");
+
+	tw = gtk_builder_get_object(tab->ui, "tw");
+	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(tw));
+
+	mpd_send(tab->mpdsource, MPD_CMD_CLEAR, NULL);
+	library_add_selected(tab, select);
 }
 

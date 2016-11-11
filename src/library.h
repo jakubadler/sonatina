@@ -53,6 +53,7 @@ struct library_tab {
 enum lib_columns {
 	LIB_COL_NAME,
 	LIB_COL_ICON,
+	LIB_COL_URI,
 	LIB_COL_COUNT
 };
 
@@ -137,6 +138,15 @@ void library_set_listing(struct library_tab *tab, enum listing_type listing);
 gboolean library_load(struct library_tab *tab);
 
 /**
+  @brief Add item to current playlist.
+  @param tab Library tab.
+  @param name Name of item in current library listing or URI if it's a song or
+  directory.
+  @returns TRUE when a command was successfully sent, FALSE otherwise.
+  */
+gboolean library_add(struct library_tab *tab, const char *name);
+
+/**
   @brief Create new path root.
   @param listing Listing type.
   @returns Newly allocated root node that should be freed with @a
@@ -184,7 +194,7 @@ void library_model_append_entity(GtkListStore *model, const struct mpd_entity *e
   @param type Type of the item.
   @param name Name of the item.
   */
-void library_model_append(GtkListStore *model, enum listing_type type, const char *name);
+void library_model_append(GtkListStore *model, enum listing_type type, const char *name, const char *uri);
 
 /**
   @brief Get path string for given path. This string doesn't begin with slash to
@@ -201,5 +211,27 @@ gchar *library_path_get_uri(const struct library_path *root, const struct librar
   @returns Menu widget.
   */
 GtkWidget *library_selector_menu(struct library_tab *tab);
+
+/**
+  @brief Iterate over all items in selection and call @a library_tab() to
+  request adding them to playlist.
+  @param tab Library tab.
+  @param selection Selection on library TreeView.
+  @return TRUE if all commands were successfully sent.
+  */
+gboolean library_add_selected(struct library_tab *tab, GtkTreeSelection *selection);
+
+/**
+  @brief Action to add selected items from library to playlist.
+  @param action Action.
+  @param param Action parameter.
+  @param data Pointer to library tab.
+  */
+void library_add_action(GSimpleAction *action, GVariant *param, gpointer data);
+
+/**
+  @brief Same as 'add' action except that it clers playlist befor adding items.
+  */
+void library_replace_action(GSimpleAction *action, GVariant *param, gpointer data);
 
 #endif

@@ -47,6 +47,7 @@ GtkWidget *sonatina_menu(GMenuModel *specific);
   @param menu Context specific part of the menu that will be displayed.
   */
 void connect_popup(GtkWidget *w, GMenuModel *menu);
+void connect_popup_tw(GtkWidget *w, GMenuModel *menu);
 
 void connect_signals();
 
