@@ -103,6 +103,8 @@ const char *mpd_cmd_to_str(enum mpd_cmd_type cmd)
 		return "findadd";
 	case MPD_CMD_CLEAR:
 		return "clear";
+	case MPD_CMD_UPDATE:
+		return "update";
 	default:
 		return NULL;
 	}

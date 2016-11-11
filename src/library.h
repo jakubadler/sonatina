@@ -221,6 +221,8 @@ GtkWidget *library_selector_menu(struct library_tab *tab);
   */
 gboolean library_add_selected(struct library_tab *tab, GtkTreeSelection *selection);
 
+void library_selection_changed(GtkTreeSelection *selection, gpointer data);
+
 /**
   @brief Action to add selected items from library to playlist.
   @param action Action.
@@ -233,5 +235,7 @@ void library_add_action(GSimpleAction *action, GVariant *param, gpointer data);
   @brief Same as 'add' action except that it clers playlist befor adding items.
   */
 void library_replace_action(GSimpleAction *action, GVariant *param, gpointer data);
+
+void library_update_action(GSimpleAction *action, GVariant *param, gpointer data);
 
 #endif

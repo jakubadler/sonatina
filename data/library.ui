@@ -65,11 +65,15 @@
     <section>
       <item>
         <attribute name="label" translatable="yes">Add</attribute>
-        <attribute name="action">library.add</attribute>
+        <attribute name="action">library-selected.add</attribute>
       </item>
       <item>
         <attribute name="label" translatable="yes">Replace</attribute>
-        <attribute name="action">library.replace</attribute>
+        <attribute name="action">library-selected.replace</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Update</attribute>
+        <attribute name="action">library.update</attribute>
       </item>
     </section>
   </menu>

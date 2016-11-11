@@ -20,6 +20,7 @@ struct pl_tab {
 	struct sonatina_tab tab;
 	GtkBuilder *ui; /** GTK builder containing UI definitons of the playlist
 			 tab */
+	GSource *mpdsource; /** Connected MPD source or NULL */
 	size_t n_columns; /** Number of user-defined columns */
 	gchar **columns; /** Format of user-defined columns; NULL-terminated array of length n_columns */
 	GtkListStore *store; /** Contains internal coulumns and user-defined
@@ -69,5 +70,10 @@ void playlist_clicked_cb(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn *
 
 void pl_process_song(GList *args, union mpd_cmd_answer *answer, void *data);
 void pl_process_pl(GList *args, union mpd_cmd_answer *answer, void *data);
+
+void pl_selection_changed(GtkTreeSelection *selection, gpointer data);
+
+void playlist_remove_action(GSimpleAction *action, GVariant *param, gpointer data);
+void playlist_clear_action(GSimpleAction *action, GVariant *param, gpointer data);
 
 #endif

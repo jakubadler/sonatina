@@ -24,4 +24,16 @@
       </object>
     </child>
   </object>
+  <menu id="menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Remove</attribute>
+        <attribute name="action">playlist-selected.remove</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Clear</attribute>
+        <attribute name="action">playlist.clear</attribute>
+      </item>
+    </section>
+  </menu>
 </interface>

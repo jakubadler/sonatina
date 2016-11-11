@@ -7,14 +7,24 @@
 #include "client.h"
 #include "gui.h"
 
+static GActionEntry playlist_selected_actions[] = {
+	{ "remove", playlist_remove_action, NULL, NULL, NULL }
+};
+
+static GActionEntry playlist_actions[] = {
+	{ "clear", playlist_clear_action, NULL, NULL, NULL }
+};
+
 gboolean pl_tab_init(struct sonatina_tab *tab)
 {
 	struct pl_tab *pltab = (struct pl_tab *) tab;
 	size_t i;
 	GType *types;
 	GObject *tw;
+	GObject *menu;
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *col;
+	GtkTreeSelection *selection;
 	gchar *title;
 	gchar *format;
 
@@ -70,11 +80,18 @@ gboolean pl_tab_init(struct sonatina_tab *tab)
 		gtk_tree_view_append_column(GTK_TREE_VIEW(tw), col);
 	}
 
+	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tw));
 	g_signal_connect(G_OBJECT(tw), "row-activated", G_CALLBACK(playlist_clicked_cb), NULL);
-	connect_popup(GTK_WIDGET(tw), NULL);
+	g_signal_connect(G_OBJECT(selection), "changed", G_CALLBACK(pl_selection_changed), pltab);
 
 	/* set tab widget */
 	tab->widget = GTK_WIDGET(gtk_builder_get_object(pltab->ui, "top"));
+
+	pltab->mpdsource = NULL;
+
+	menu = gtk_builder_get_object(pltab->ui, "menu");
+	connect_popup(GTK_WIDGET(tw), G_MENU_MODEL(menu));
+	connect_popup(GTK_WIDGET(tab->widget), G_MENU_MODEL(menu));
 
 	return TRUE;
 }
@@ -82,12 +99,23 @@ gboolean pl_tab_init(struct sonatina_tab *tab)
 void pl_tab_set_source(struct sonatina_tab *tab, GSource *source)
 {
 	struct pl_tab *pltab = (struct pl_tab *) tab;
+	GObject *tw;
+	GSimpleActionGroup *actions;
+
+	pltab->mpdsource = source;
+	tw = gtk_builder_get_object(pltab->ui, "tw");
 
 	if (source) {
 		mpd_source_register(source, MPD_CMD_CURRENTSONG, pl_process_song, tab);
 		mpd_source_register(source, MPD_CMD_PLINFO, pl_process_pl, tab);
+
+		actions = g_simple_action_group_new();
+		g_action_map_add_action_entries(G_ACTION_MAP(actions), playlist_actions, G_N_ELEMENTS(playlist_actions), pltab);
+		gtk_widget_insert_action_group(GTK_WIDGET(tw), "playlist", G_ACTION_GROUP(actions));
 	} else {
 		gtk_list_store_clear(pltab->store);
+		gtk_widget_insert_action_group(GTK_WIDGET(tw), "playlist", NULL);
+		gtk_widget_insert_action_group(GTK_WIDGET(tw), "playlist-selected", NULL);
 	}
 }
 
@@ -192,5 +220,45 @@ void pl_process_pl(GList *args, union mpd_cmd_answer *answer, void *data)
 		song = (struct mpd_song *) cur->data;
 		pl_update(tab, song);
 	}
+}
+
+void pl_selection_changed(GtkTreeSelection *selection, gpointer data)
+{
+	struct pl_tab *tab = (struct pl_tab *) data;
+	GtkTreeModel *model;
+	GList *rows;
+	GtkTreeView *tw;
+	GSimpleActionGroup *actions;
+
+	tw = gtk_tree_selection_get_tree_view(selection);
+	rows = gtk_tree_selection_get_selected_rows(selection, &model);
+
+	if (rows) {
+		actions = g_simple_action_group_new();
+		g_action_map_add_action_entries(G_ACTION_MAP(actions), playlist_selected_actions, G_N_ELEMENTS(playlist_selected_actions), tab);
+		gtk_widget_insert_action_group(GTK_WIDGET(tw), "playlist-selected", G_ACTION_GROUP(actions));
+	} else {
+		gtk_widget_insert_action_group(GTK_WIDGET(tw), "playlist-selected", NULL);
+	}
+
+	g_list_free_full(rows, (GDestroyNotify) gtk_tree_path_free);
+}
+
+void playlist_remove_action(GSimpleAction *action, GVariant *param, gpointer data)
+{
+	struct pl_tab *tab = (struct pl_tab *) data;
+
+	MSG_INFO("Clear action activated");
+
+	mpd_send(tab->mpdsource, MPD_CMD_CLEAR, NULL);
+}
+
+void playlist_clear_action(GSimpleAction *action, GVariant *param, gpointer data)
+{
+	struct pl_tab *tab = (struct pl_tab *) data;
+
+	MSG_INFO("Clear action activated");
+
+	mpd_send(tab->mpdsource, MPD_CMD_CLEAR, NULL);
 }
 

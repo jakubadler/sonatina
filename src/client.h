@@ -25,6 +25,7 @@ enum mpd_cmd_type {
 	MPD_CMD_ADD,
 	MPD_CMD_FINDADD,
 	MPD_CMD_CLEAR,
+	MPD_CMD_UPDATE,
 	MPD_CMD_COUNT
 };
 
