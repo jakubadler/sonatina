@@ -6,11 +6,12 @@ LIBEXECDIR=	${EXEC_PREFIX}/libexec
 DATAROOTDIR=	${PREFIX}/share
 DATADIR=	${DATAROOTDIR}
 SYSCONFDIR=	${PREFIX}/etc
+DEBUG?=		-O2
 PROG=		sonatina
 LIBS=		libmpdclient gtk+-3.0
 CFLAGS=		-std=c99 -D_DEFAULT_SOURCE \
 		-Wall -Wextra -pedantic -Wno-unused-parameter -Wno-missing-field-initializers \
-		-DDEBUG -g \
+		${DEBUG} \
 		-DPROG=\"${PROG}\" \
 		-DDATADIR=\"${DATADIR}\" \
 		-DSYSCONFDIR=\"${SYSCONFDIR}\" \
