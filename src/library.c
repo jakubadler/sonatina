@@ -256,6 +256,7 @@ void library_model_append_entity(GtkListStore *model, const struct mpd_entity *e
 		g_free(format);
 		break;
 	default:
+		type = LIBRARY_FS;
 		name = g_strdup("unknown");
 		break;
 	}
