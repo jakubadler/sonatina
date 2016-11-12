@@ -9,13 +9,15 @@
 #define UIFILE DATADIR "/" PROG "/" PROG ".ui"
 
 static GActionEntry app_entries[] = {
-	{ "disconnect", disconnect_activated, NULL, NULL, NULL },
-	{ "quit", quit_activated, NULL, NULL, NULL }
+	{ "connect", connect_action, "s", "\"\"", connect_action },
+	{ "disconnect", disconnect_action, NULL, NULL, NULL },
+	{ "quit", quit_action, NULL, NULL, NULL }
 };
 
 void app_startup_cb(GtkApplication *app, gpointer user_data)
 {
 	GObject *win;
+	gchar *profile;
 
 	MSG_DEBUG("app_startup_cb()");
 
@@ -34,6 +36,9 @@ void app_startup_cb(GtkApplication *app, gpointer user_data)
 	g_application_hold(G_APPLICATION(app));
 
 	g_action_map_add_action_entries(G_ACTION_MAP(app), app_entries, G_N_ELEMENTS(app_entries), app);
+	profile = g_key_file_get_string(sonatina.rc, "main", "active_profile", NULL);
+	g_action_group_activate_action(G_ACTION_GROUP(app), "connect", g_variant_new("s", profile));
+	g_free(profile);
 }
 
 void app_shutdown_cb(GtkApplication *app, gpointer user_data)
@@ -152,13 +157,32 @@ GtkWidget *sonatina_menu(GMenuModel *specific)
 	GtkWidget *menuw;
 	GMenu *menu;
 	GObject *sonatina_menu;
+	GObject *connmenu;
+	GList *profile;
+	gchar *name;
+	gchar *action;
+
+	connmenu = gtk_builder_get_object(sonatina.gui, "connmenu");
+	g_menu_remove_all(G_MENU(connmenu));
+	for (profile = sonatina.profiles; profile; profile = profile->next) {
+		name = g_key_file_get_string(profile->data,
+				"profile", "name", NULL);
+		action = g_strdup_printf("%s::%s", "app.connect", name);
+		g_menu_append(G_MENU(connmenu), name, action);
+		g_free(name);
+		g_free(action);
+	}
+
+	g_menu_append(G_MENU(connmenu), "Disconnect", "app.connect::");
 
 	sonatina_menu = gtk_builder_get_object(sonatina.gui, "menu");
 	menu = g_menu_new();
 	g_menu_prepend_section(menu, NULL, G_MENU_MODEL(sonatina_menu));
+
 	if (specific) {
 		g_menu_prepend_section(menu, NULL, specific);
 	}
+
 	menuw = gtk_menu_new_from_model(G_MENU_MODEL(menu));
 
 	return menuw;
@@ -212,8 +236,8 @@ void connect_signals()
 	GObject *w;
 
 	/* context menu */
-	/*w = gtk_builder_get_object(sonatina.gui, "window");
-	g_signal_connect(w, "popup-menu", G_CALLBACK(sonatina_popup_menu), NULL);*/
+	w = gtk_builder_get_object(sonatina.gui, "window");
+	connect_popup(GTK_WIDGET(w), NULL);
 
 	/* playback buttons */
 	w = gtk_builder_get_object(sonatina.gui, "prev_button");
@@ -238,12 +262,29 @@ void connect_signals()
 
 }
 
-void quit_activated(GSimpleAction *action, GVariant *param, gpointer data)
+void connect_action(GSimpleAction *action, GVariant *param, gpointer data)
+{
+	const gchar *profile;
+	gsize len;
+
+	profile = g_variant_get_string(param, &len);
+	if (len) {
+		if (!sonatina_change_profile(profile)) {
+			MSG_WARNING("Invalid profile '%s'", profile);
+			return;
+		}
+	} else {
+		sonatina_disconnect();
+	}
+	g_simple_action_set_state(action, param);
+}
+
+void quit_action(GSimpleAction *action, GVariant *param, gpointer data)
 {
 	g_application_quit(G_APPLICATION(data));
 }
 
-void disconnect_activated(GSimpleAction *action, GVariant *param, gpointer data)
+void disconnect_action(GSimpleAction *action, GVariant *param, gpointer data)
 {
 	sonatina_disconnect();
 }

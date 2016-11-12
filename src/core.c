@@ -16,7 +16,6 @@ struct sonatina_instance sonatina;
 
 void sonatina_init()
 {
-	gchar *str;
 	struct sonatina_tab *tab;
 
 	MSG_DEBUG("sonatina_init()");
@@ -40,14 +39,6 @@ void sonatina_init()
 
 	tab = sonatina_tab_new("library", "Library", sizeof(struct library_tab), library_tab_init, library_tab_set_source, library_tab_destroy);
 	sonatina_append_tab(tab);
-
-	str = g_key_file_get_string(sonatina.rc, "main", "active_profile", NULL);
-	if (str) {
-		if (!sonatina_change_profile(str)) {
-			MSG_WARNING("invalid profile %s", str);
-		}
-		g_free(str);
-	}
 }
 
 void sonatina_destroy()

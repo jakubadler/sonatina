@@ -52,7 +52,8 @@ void connect_popup_tw(GtkWidget *w, GMenuModel *menu);
 void connect_signals();
 
 /* Actions */
-void quit_activated(GSimpleAction *action, GVariant *param, gpointer data);
-void disconnect_activated(GSimpleAction *action, GVariant *param, gpointer data);
+void connect_action(GSimpleAction *action, GVariant *param, gpointer data);
+void quit_action(GSimpleAction *action, GVariant *param, gpointer data);
+void disconnect_action(GSimpleAction *action, GVariant *param, gpointer data);
 
 #endif
