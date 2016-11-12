@@ -17,8 +17,8 @@ ${OBJ}: ${HEAD}
 	@${CC} -c ${CFLAGS} $<
 
 install: ${BIN}
-	mkdir -p ${BINDIR}
-	cp -f ${BIN} ${BINDIR}/${BIN}
+	install -d ${BINDIR}
+	install -t ${BINDIR} ${BIN}
 
 uninstall:
 	rm -f ${BINDIR}/${BIN}

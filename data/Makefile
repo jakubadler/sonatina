@@ -1,10 +1,10 @@
 include ../config.mk
 
 install: ${PROG}.desktop
-	mkdir -p ${DATADIR}/applications
-	cp -f ${PROG}.desktop ${DATADIR}/applications/${PROG}.desktop
-	mkdir -p ${DATADIR}/${PROG}
-	cp -f *.ui ${DATADIR}/${PROG}/
+	install -d ${DATADIR}/applications
+	install -t ${DATADIR}/applications ${PROG}.desktop
+	install -d ${DATADIR}/${PROG}
+	install -t ${DATADIR}/${PROG} *.ui
 
 uninstall:
 	rm -f ${DATADIR}/applications/${PROG}.desktop
