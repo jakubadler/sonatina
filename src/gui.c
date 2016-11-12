@@ -214,12 +214,22 @@ void sonatina_popup_cb(GtkWidget *w, GMenuModel *specific)
 
 gboolean sonatina_click_cb(GtkWidget *w, GdkEventButton *event, GMenuModel *specific)
 {
+	GtkTreeSelection *selection;
+	GtkTreePath *path;
+
 	if (gdk_event_triggers_context_menu ((GdkEvent *) event) && event->type == GDK_BUTTON_PRESS) {
+		if (!g_strcmp0(G_OBJECT_TYPE_NAME(w), "GtkTreeView")) {
+			/* Special handling of GtkTreeView */
+			selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(w));
+			if (gtk_tree_selection_count_selected_rows(selection) == 0) {
+				gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(w),
+						event->x, event->y,
+						&path, NULL, NULL, NULL);
+				gtk_tree_selection_select_path(selection, path);
+			}
+		}
 		sonatina_popup_menu(w, event, specific);
-		/*return FALSE;*/
-		/* Returning false here allows GtkTreeView to handle this event
-		 * and select the clicked row; not sure if this is a proper way
-		 * to do this. */
+		return TRUE;
 	}
 	
 	return FALSE;
