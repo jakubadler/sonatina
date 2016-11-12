@@ -81,6 +81,7 @@ gboolean pl_tab_init(struct sonatina_tab *tab)
 	}
 
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tw));
+	gtk_tree_selection_set_mode(selection, GTK_SELECTION_MULTIPLE);
 	g_signal_connect(G_OBJECT(tw), "row-activated", G_CALLBACK(playlist_clicked_cb), NULL);
 	g_signal_connect(G_OBJECT(selection), "changed", G_CALLBACK(pl_selection_changed), pltab);
 
@@ -247,10 +248,31 @@ void pl_selection_changed(GtkTreeSelection *selection, gpointer data)
 void playlist_remove_action(GSimpleAction *action, GVariant *param, gpointer data)
 {
 	struct pl_tab *tab = (struct pl_tab *) data;
+	GObject *tw;
+	GtkTreeSelection *selection;
+	GtkTreeModel *model;
+	GtkTreeIter iter;
+	GList *rows;
+	GList *row;
+	gint id;
+	char buf[24];
 
-	MSG_INFO("Clear action activated");
+	MSG_INFO("Remove action activated");
 
-	mpd_send(tab->mpdsource, MPD_CMD_CLEAR, NULL);
+	tw = gtk_builder_get_object(tab->ui, "tw");
+	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tw));
+	rows = gtk_tree_selection_get_selected_rows(selection, &model);
+
+	for (row = rows; row; row = row->next) {
+		if (!gtk_tree_model_get_iter(model, &iter, row->data)) {
+			continue;
+		}
+		gtk_tree_model_get(model, &iter, PL_ID, &id, -1);
+		sprintf(buf, "%d", id);
+		mpd_send(tab->mpdsource, MPD_CMD_DELETEID, buf, NULL);
+	}
+
+	g_list_free_full(rows, (GDestroyNotify) gtk_tree_path_free);
 }
 
 void playlist_clear_action(GSimpleAction *action, GVariant *param, gpointer data)

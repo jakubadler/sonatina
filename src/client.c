@@ -105,6 +105,10 @@ const char *mpd_cmd_to_str(enum mpd_cmd_type cmd)
 		return "clear";
 	case MPD_CMD_UPDATE:
 		return "update";
+	case MPD_CMD_DELETE:
+		return "delete";
+	case MPD_CMD_DELETEID:
+		return "deleteid";
 	default:
 		return NULL;
 	}

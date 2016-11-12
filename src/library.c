@@ -59,6 +59,7 @@ gboolean library_tab_init(struct sonatina_tab *tab)
 	g_signal_connect(G_OBJECT(tw), "row-activated", G_CALLBACK(library_clicked_cb), libtab);
 
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tw));
+	gtk_tree_selection_set_mode(selection, GTK_SELECTION_MULTIPLE);
 	g_signal_connect(G_OBJECT(selection), "changed", G_CALLBACK(library_selection_changed), libtab);
 
 	header = gtk_builder_get_object(libtab->ui, "header");
