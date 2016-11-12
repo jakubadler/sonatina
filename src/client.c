@@ -19,8 +19,6 @@ GSourceFuncs mpdsourcefuncs = {
 	mpd_prepare,
 	mpd_check,
 	mpd_dispatch,
-	NULL,
-	NULL,
 	NULL
 };
 
@@ -38,21 +36,35 @@ gboolean mpd_check(GSource *source)
 gboolean mpd_dispatch(GSource *source, GSourceFunc callback, gpointer data)
 {
 	struct mpd_source *mpdsource = (struct mpd_source *) source;
-	GIOCondition events;
+	GIOCondition events, revents;
+	enum mpd_async_event mpd_events;
 	gboolean retval = TRUE;
 
-	events = g_source_query_unix_fd(source, mpdsource->fd);
+	mpd_events = mpd_async_events(mpdsource->async);
+	events = 0;
 
-	if (events & G_IO_HUP) {
-		MSG_DEBUG("connection closed");
-		retval = FALSE;
-	}
-	if (events & G_IO_IN) {
+	if (mpd_events & MPD_ASYNC_EVENT_READ)
+		events = events | G_IO_IN;
+	if (mpd_events & MPD_ASYNC_EVENT_WRITE)
+		events = events | G_IO_OUT;
+	if (mpd_events & MPD_ASYNC_EVENT_HUP)
+		events = events | G_IO_HUP;
+	if (mpd_events & MPD_ASYNC_EVENT_ERROR)
+		events = events | G_IO_ERR;
+
+	g_source_modify_unix_fd(source, mpdsource->fd, events);
+	revents = g_source_query_unix_fd(source, mpdsource->fd);
+
+	if (revents & G_IO_IN) {
 		retval = retval && mpd_async_io(mpdsource->async, MPD_ASYNC_EVENT_READ);
 		while (mpd_recv(mpdsource)) {};
 	}
-	if (events & G_IO_OUT) {
+	if (revents & G_IO_OUT) {
 		retval = retval && mpd_async_io(mpdsource->async, MPD_ASYNC_EVENT_WRITE);
+	}
+	if (revents & G_IO_HUP) {
+		MSG_DEBUG("connection closed");
+		retval = FALSE;
 	}
 
 	if (!retval) {
@@ -484,6 +496,7 @@ gboolean mpd_cmd_send_v(GSource *source, struct mpd_cmd *cmd, va_list args)
 
 	va_copy(args2, args);
 	retval = mpd_async_send_command_v(mpdsource->async, cmd_str, args);
+	mpd_async_io(mpdsource->async, MPD_ASYNC_EVENT_WRITE);
 
 	if (!retval) {
 		va_end(args2);
@@ -569,7 +582,7 @@ GSource *mpd_source_new(int fd)
 
 	source = g_source_new(&mpdsourcefuncs, sizeof(struct mpd_source));
 	mpdsource = (struct mpd_source *) source;
-	mpdsource->fd = g_source_add_unix_fd(source, fd, G_IO_IN | G_IO_OUT | G_IO_HUP);
+	mpdsource->fd = g_source_add_unix_fd(source, fd, G_IO_IN | G_IO_OUT | G_IO_HUP | G_IO_ERR);
 	mpdsource->async = mpd_async_new(fd);
 	g_source_set_priority(source, G_PRIORITY_DEFAULT_IDLE);
 
