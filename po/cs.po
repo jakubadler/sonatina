@@ -1,0 +1,134 @@
+# Czech translations for PACKAGE package.
+# Copyright (C) 2016 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# Jakub Adler <jakubadler@gmail.com>, 2016.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2016-11-13 14:04+0100\n"
+"PO-Revision-Date: 2016-11-13 14:34+0100\n"
+"Last-Translator: Jakub Adler <jakubadler@gmail.com>\n"
+"Language-Team: Czech\n"
+"Language: cs\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: src/core.c:38
+msgid "Playlist"
+msgstr "Playlist"
+
+#: src/core.c:41
+msgid "Library"
+msgstr "Knihovna"
+
+#: src/gui.c:177
+msgid "Disconnect"
+msgstr "Odpojit"
+
+#: src/library.c:26 src/library.c:240
+msgid "Filesystem"
+msgstr "Složky"
+
+#: src/library.c:28 src/library.c:323
+msgid "Genre"
+msgstr "Žánr"
+
+#: src/library.c:30 src/library.c:326
+msgid "Artist"
+msgstr "Interpret"
+
+#: src/library.c:32 src/library.c:329
+msgid "Album"
+msgstr "Album"
+
+#: src/library.c:34
+msgid "Song"
+msgstr "Skladba"
+
+#: src/library.c:274
+msgid "unknown"
+msgstr "neznámý"
+
+#: src/main.c:28
+msgid "Increase verbosity level"
+msgstr ""
+
+#: src/main.c:33
+msgid "Stop currently running sonatina instance"
+msgstr ""
+
+#: src/main.c:38
+msgid "Change MPD profile"
+msgstr "Změnit profil"
+
+#: src/songattr.c:82
+msgid "(unknown)"
+msgstr ""
+
+#: src/songattr.c:93
+msgid "ID"
+msgstr "ID"
+
+#: src/songattr.c:95
+msgid "Position"
+msgstr "Pozice"
+
+#: src/songattr.c:97
+msgid "Length"
+msgstr "Délka"
+
+#: src/songattr.c:99
+msgid "Path"
+msgstr "Cesta"
+
+#: src/songattr.c:101
+msgid "Filename"
+msgstr "Název"
+
+#: src/songattr.c:103
+msgid "Modification time"
+msgstr "Čas poslední změny"
+
+#: src/songattr.c:105
+msgid "Elapsed time"
+msgstr ""
+
+#: data/library.ui:67
+msgid "Add"
+msgstr "Přidat"
+
+#: data/library.ui:71
+msgid "Nahradit"
+msgstr ""
+
+#: data/library.ui:75
+msgid "Update"
+msgstr "Aktualizovat"
+
+#: data/playlist.ui:30
+msgid "Remove"
+msgstr "Odstranit"
+
+#: data/playlist.ui:34
+msgid "Clear"
+msgstr ""
+
+#: data/sonatina.ui:87
+msgid "Title"
+msgstr "Název"
+
+#: data/sonatina.ui:104
+msgid "Subtitle"
+msgstr ""
+
+#: data/sonatina.ui:301
+msgid "Connection"
+msgstr "Spojení"
+
+#: data/sonatina.ui:304
+msgid "Quit"
+msgstr "Ukončit"
