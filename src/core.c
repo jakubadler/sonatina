@@ -11,6 +11,7 @@
 
 #include "playlist.h"
 #include "library.h"
+#include "gettext.h"
 
 struct sonatina_instance sonatina;
 
@@ -34,10 +35,10 @@ void sonatina_init()
 
 	sonatina.tabs = NULL;
 
-	tab = sonatina_tab_new("playlist", "Playlist", sizeof(struct pl_tab), pl_tab_init, pl_tab_set_source, pl_tab_destroy);
+	tab = sonatina_tab_new("playlist", _("Playlist"), sizeof(struct pl_tab), pl_tab_init, pl_tab_set_source, pl_tab_destroy);
 	sonatina_append_tab(tab);
 
-	tab = sonatina_tab_new("library", "Library", sizeof(struct library_tab), library_tab_init, library_tab_set_source, library_tab_destroy);
+	tab = sonatina_tab_new("library", _("Library"), sizeof(struct library_tab), library_tab_init, library_tab_set_source, library_tab_destroy);
 	sonatina_append_tab(tab);
 }
 

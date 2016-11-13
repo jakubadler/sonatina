@@ -54,7 +54,7 @@ GtkBuilder *load_tab_ui(const char *name)
 	gint err;
 
 	uifile = g_strdup_printf("%s.ui", name);
-	uipath = g_build_filename(DATADIR, PROG, uifile, NULL);
+	uipath = g_build_filename(DATADIR, PACKAGE, uifile, NULL);
 	g_free(uifile);
 
 	ui = gtk_builder_new();

@@ -3,3 +3,4 @@
 *~
 *.o
 src/sonatina
+po/*.pot

@@ -9,6 +9,7 @@
 #include "songattr.h"
 #include "core.h"
 #include "gui.h"
+#include "gettext.h"
 
 const char *listing_icons[] = {
 	[LIBRARY_FS] = "folder",
@@ -18,13 +19,25 @@ const char *listing_icons[] = {
 	[LIBRARY_SONG] = "audio-x-generic"
 };
 
-const char *listing_labels[] = {
-	[LIBRARY_FS] = "Filesystem",
-	[LIBRARY_GENRE] = "Genre",
-	[LIBRARY_ARTIST] = "Artist",
-	[LIBRARY_ALBUM] = "Album",
-	[LIBRARY_SONG] = "Song"
-};
+const char *listing_labels(enum listing_type type)
+{
+	switch (type) {
+	case LIBRARY_FS:
+		return _("Filesystem");
+	case LIBRARY_GENRE:
+		return _("Genre");
+	case LIBRARY_ARTIST:
+		return _("Artist");
+	case LIBRARY_ALBUM:
+		return _("Album");
+	case LIBRARY_SONG:
+		return _("Song");
+	default:
+		break;
+	}
+
+	return NULL;
+}
 
 static GActionEntry library_selected_actions[] = {
 	{ "add", library_add_action, NULL, NULL, NULL },
@@ -224,7 +237,7 @@ void library_set_listing(struct library_tab *tab, enum listing_type listing)
 	tab->path = tab->root;
 
 	if (listing == LIBRARY_FS) {
-		title = "Filesystem";
+		title = _("Filesystem");
 	} else {
 		title = tab->root->name;
 	}
@@ -258,7 +271,7 @@ void library_model_append_entity(GtkListStore *model, const struct mpd_entity *e
 		break;
 	default:
 		type = LIBRARY_FS;
-		name = g_strdup("unknown");
+		name = g_strdup(_("unknown"));
 		break;
 	}
 
@@ -307,13 +320,13 @@ struct library_path *library_path_root(enum listing_type listing)
 		path->name = g_strdup("");
 		break;
 	case LIBRARY_GENRE:
-		path->name = g_strdup("Genre");
+		path->name = g_strdup(_("Genre"));
 		break;
 	case LIBRARY_ARTIST:
-		path->name = g_strdup("Artist");
+		path->name = g_strdup(_("Artist"));
 		break;
 	case LIBRARY_ALBUM:
-		path->name = g_strdup("Album");
+		path->name = g_strdup(_("Album"));
 		break;
 	default:
 		break;
@@ -594,7 +607,7 @@ GtkWidget *library_selector_menu(struct library_tab *tab)
 	menu = gtk_menu_new();
 
 	for (i = 0; i < LIBRARY_SONG; i++) {
-		item = gtk_menu_item_new_with_label(listing_labels[i]);
+		item = gtk_menu_item_new_with_label(listing_labels(i));
 		g_object_set_data(G_OBJECT(item), "listing", GINT_TO_POINTER(i));
 		g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(library_selector_activate), tab);
 		gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);

@@ -5,8 +5,9 @@
 #include "client.h"
 #include "core.h"
 #include "util.h"
+#include "gettext.h"
 
-#define UIFILE DATADIR "/" PROG "/" PROG ".ui"
+#define UIFILE DATADIR "/" PACKAGE "/" PACKAGE ".ui"
 
 static GActionEntry app_entries[] = {
 	{ "connect", connect_action, "s", "\"\"", connect_action },
@@ -173,7 +174,7 @@ GtkWidget *sonatina_menu(GMenuModel *specific)
 		g_free(action);
 	}
 
-	g_menu_append(G_MENU(connmenu), "Disconnect", "app.connect::");
+	g_menu_append(G_MENU(connmenu), _("Disconnect"), "app.connect::");
 
 	sonatina_menu = gtk_builder_get_object(sonatina.gui, "menu");
 	menu = g_menu_new();

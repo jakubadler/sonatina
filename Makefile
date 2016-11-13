@@ -1,6 +1,8 @@
 include config.mk
 
-.PHONY: build install uninstall doc clean test
+.PHONY: all build install uninstall doc clean test update-po
+
+all: build
 
 build:
 	make -C src
@@ -27,6 +29,11 @@ clean:
 	make -C src clean
 	make -C data clean
 	make -C po clean
+
+update-po:
+	xgettext -d ${PACKAGE} -k_ -p po --language=C src/*.c
+	xgettext -d ${PACKAGE} -k_ -p po -j data/*.ui
+	mv po/${PACKAGE}.po po/${PACKAGE}.pot
 
 test:
 	make install

@@ -2,6 +2,7 @@
 #include <mpd/client.h>
 
 #include "songattr.h"
+#include "gettext.h"
 
 int song_attr_format_to_type(char c)
 {
@@ -78,7 +79,7 @@ gchar *get_song_attr(int attr, const struct mpd_song *song)
 		buf = g_strdup(mpd_song_get_uri(song));
 		break;
 	default:
-		buf = g_strdup("(unknown)");
+		buf = g_strdup(_("(unknown)"));
 		break;
 	}
 
@@ -89,19 +90,19 @@ const char *get_song_attr_name(int attr)
 {
 	switch (attr) {
 	case SONG_ATTR_ID:
-		return "ID";
+		return _("ID");
 	case SONG_ATTR_POS:
-		return "Position";
+		return _("Position");
 	case SONG_ATTR_LENGTH:
-		return "Length";
+		return _("Length");
 	case SONG_ATTR_URI:
-		return "Path";
+		return _("Path");
 	case SONG_ATTR_FILE:
-		return "Filename";
+		return _("Filename");
 	case SONG_ATTR_MOD:
-		return "Modification time";
+		return _("Modification time");
 	case SONG_ATTR_TIME:
-		return "Elapsed time";
+		return _("Elapsed time");
 	}
 
 	if (attr < MPD_TAG_COUNT) {

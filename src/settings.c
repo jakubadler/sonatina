@@ -15,15 +15,15 @@ gchar *profiledir;
 void sonatina_settings_prepare()
 {
 	if (!rcdir) {
-		rcdir = g_build_filename(g_get_user_config_dir(), PROG, NULL);
+		rcdir = g_build_filename(g_get_user_config_dir(), PACKAGE, NULL);
 	}
 
 	if (!rcfile) {
-		rcfile = g_build_filename(g_get_user_config_dir(), PROG, "sonatinarc", NULL);
+		rcfile = g_build_filename(g_get_user_config_dir(), PACKAGE, "sonatinarc", NULL);
 	}
 
 	if (!profiledir) {
-		profiledir = g_build_filename(g_get_user_config_dir(), PROG, "profiles", NULL);
+		profiledir = g_build_filename(g_get_user_config_dir(), PACKAGE, "profiles", NULL);
 	}
 
 	g_mkdir_with_parents(profiledir, 0744);
