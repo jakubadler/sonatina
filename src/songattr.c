@@ -35,58 +35,76 @@ int song_attr_format_to_type(char c)
 	return -1;
 }
 
-gchar *get_song_attr(int attr, const struct mpd_song *song)
+gchar *get_song_untagged(enum mpd_tag_type attr, const struct mpd_song *song)
+{
+	g_assert(song != NULL);
+
+	switch (attr) {
+	case MPD_TAG_TITLE:
+		return get_song_attr(SONG_ATTR_FILE, song);
+	case MPD_TAG_ARTIST:
+	case MPD_TAG_ALBUM:
+	default:
+		return g_strdup(_("Untagged"));
+	}
+
+	return NULL;
+}
+
+gchar *get_song_attr(enum song_attr attr, const struct mpd_song *song)
 {
 	int num = 0;
-	gchar *buf;
+	gchar *result;
 	const char *tag;
 
-	if (attr < MPD_TAG_COUNT) {
+	g_assert(song != NULL);
+
+	if (attr < (enum song_attr) MPD_TAG_COUNT) {
 		tag = mpd_song_get_tag(song, attr, 0);
 		if (tag) {
-			buf = g_strdup(tag);
+			result = g_strdup(tag);
 		} else {
-			buf = g_strdup("(unknown)");
+			result = get_song_untagged(attr, song);
 		}
-		return buf;
+		return result;
 	}
 
 	switch (attr) {
 	case SONG_ATTR_ID:
 		num = mpd_song_get_id(song);
-		buf = g_strdup_printf("%d", num);
+		result = g_strdup_printf("%d", num);
 		break;
 	case SONG_ATTR_POS:
 		num = mpd_song_get_pos(song);
-		buf = g_strdup_printf("%d", num);
+		result = g_strdup_printf("%d", num);
 		break;
 	case SONG_ATTR_LENGTH:
 		num = mpd_song_get_duration(song);
-		buf = g_strdup_printf("%d:%.2d", num/60, num%60);
+		result = g_strdup_printf("%d:%.2d", num/60, num%60);
 		break;
 	case SONG_ATTR_TIME:
-		buf = g_strdup_printf("%d:%.2d", num/60, num%60);
+		result = g_strdup_printf("%d:%.2d", num/60, num%60);
 		break;
 	case SONG_ATTR_MOD:
 		num = mpd_song_get_last_modified(song);
 		/* TODO: proper time format */
-		buf = g_strdup_printf("%d", num);
+		result = g_strdup_printf("%d", num);
 		break;
 	case SONG_ATTR_URI:
-		buf = g_strdup(mpd_song_get_uri(song));
+		result = g_strdup(mpd_song_get_uri(song));
 		break;
 	case SONG_ATTR_FILE:
-		buf = g_strdup(mpd_song_get_uri(song));
+		result = g_path_get_basename(mpd_song_get_uri(song));
 		break;
 	default:
-		buf = g_strdup(_("(unknown)"));
+		result = g_strdup(_("(unknown)"));
 		break;
 	}
 
-	return buf;
+	return result;
 }
 
-const char *get_song_attr_name(int attr)
+const char *get_song_attr_name(enum song_attr attr)
 {
 	switch (attr) {
 	case SONG_ATTR_ID:
@@ -103,9 +121,11 @@ const char *get_song_attr_name(int attr)
 		return _("Modification time");
 	case SONG_ATTR_TIME:
 		return _("Elapsed time");
+	default:
+		break;
 	}
 
-	if (attr < MPD_TAG_COUNT) {
+	if (attr < (enum song_attr) MPD_TAG_COUNT) {
 		return mpd_tag_name(attr);
 	}
 

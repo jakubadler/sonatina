@@ -18,14 +18,14 @@ enum song_attr {
   @param song Song
   @returns Newly allocated string that should be freed with g_free().
   */
-gchar *get_song_attr(int attr, const struct mpd_song *song);
+gchar *get_song_attr(enum song_attr attr, const struct mpd_song *song);
 
 /**
   @brief Get attribute name.
   @param attr Attribute
   @returns Attribute name.
   */
-const char *get_song_attr_name(int attr);
+const char *get_song_attr_name(enum song_attr attr);
 
 /**
   @brief Replace certain '%'-specifiers with song attributes.

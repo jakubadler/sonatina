@@ -4,10 +4,6 @@
 #include <glib-object.h>
 #include <gtk/gtk.h>
 
-/*
- * Potentially, include other headers on which this header depends.
- */
-
 G_BEGIN_DECLS
 
 /*
