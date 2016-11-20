@@ -116,6 +116,15 @@ void library_list_cb(GList *args, union mpd_cmd_answer *answer, void *data);
 void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data);
 
 /**
+  @brief Callback for idle command; calls @a library_load() when a
+  MPD_CHANGED_DB bit is set.
+  @param args MPD command argument list.
+  @param answer Answer to command.
+  @param data Pointer to library tab.
+  */
+void library_idle_cb(GList *args, union mpd_cmd_answer *answer, void *data);
+
+/**
   @brief Callback for pathbar widget's 'changed' signal.
   @param pathbar Path bar widget.
   @param selected Index of node that was selected.

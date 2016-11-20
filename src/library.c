@@ -123,6 +123,7 @@ void library_tab_set_source(struct sonatina_tab *tab, GSource *source)
 		mpd_source_register(source, MPD_CMD_LIST, library_list_cb, tab);
 		mpd_source_register(source, MPD_CMD_LSINFO, library_lsinfo_cb, tab);
 		mpd_source_register(source, MPD_CMD_FIND, library_lsinfo_cb, tab);
+		mpd_source_register(source, MPD_CMD_IDLE, library_idle_cb, tab);
 		library_load(libtab);
 		gtk_widget_set_sensitive(GTK_WIDGET(selector), TRUE);
 		gtk_widget_set_sensitive(GTK_WIDGET(libtab->pathbar), TRUE);
@@ -219,6 +220,17 @@ void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 	tw = gtk_builder_get_object(tab->ui, "tw");
 	gtk_widget_set_sensitive(GTK_WIDGET(tw), TRUE);
 
+}
+
+void library_idle_cb(GList *args, union mpd_cmd_answer *answer, void *data)
+{
+	struct library_tab *tab = (struct library_tab *) data;
+
+	if (answer->idle & MPD_CHANGED_DB)
+	{
+		MSG_INFO("library changed");
+		library_load(tab);
+	}
 }
 
 void library_pathbar_changed(SonatinaPathBar *pathbar, gint selected, gpointer data)
