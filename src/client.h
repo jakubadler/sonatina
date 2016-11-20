@@ -123,8 +123,6 @@ gboolean parse_pair_lsinfo(union mpd_cmd_answer *answer, const struct mpd_pair *
 gboolean parse_pair_list(union mpd_cmd_answer *answer, const struct mpd_pair *pair);
 gboolean parse_pair_idle(union mpd_cmd_answer *answer, const struct mpd_pair *pair);
 
-void cmd_process_song(union mpd_cmd_answer *answer);
-void cmd_process_status(union mpd_cmd_answer *answer);
 void cmd_process_idle(union mpd_cmd_answer *answer);
 void cmd_process_plinfo(union mpd_cmd_answer *answer);
 void cmd_process_lsinfo(union mpd_cmd_answer *answer);

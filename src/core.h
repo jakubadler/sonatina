@@ -6,6 +6,8 @@
 
 #include "mpd/client.h"
 
+#include "client.h"
+
 /**
   @brief Structure holding data of a running sonatina instance.
   */
@@ -101,16 +103,24 @@ void sonatina_disconnect();
 gboolean sonatina_change_profile(const char *name);
 
 /**
-  @brief Update current song on a sonatina instance.
+  @brief 
   @param song MPD song struct.
   */
-void sonatina_update_song(const struct mpd_song *song);
+/**
+  @brief Callback for MPD command currentsong. Update current song on a sonatina instance.
+  @param args MPD command argument list.
+  @param answer Answer to command.
+  @param data Pointer to library tab.
+  */
+void sonatina_update_song(GList *args, union mpd_cmd_answer *answer, void *data);
 
 /**
-  @brief Update status on a sonatina instance.
-  @param status MPD status struct.
+  @brief Callback for MPD command status. Update status on a sonatina instance.
+  @param args MPD command argument list.
+  @param answer Answer to command.
+  @param data Pointer to library tab.
   */
-void sonatina_update_status(const struct mpd_status *status);
+void sonatina_update_status(GList *args, union mpd_cmd_answer *answer, void *data);
 
 /**
   @brief Function called every second to check elapsed time and update progressbar.

@@ -140,12 +140,10 @@ struct mpd_cmd *mpd_cmd_new(enum mpd_cmd_type type)
 	switch (type) {
 	case MPD_CMD_CURRENTSONG:
 		cmd->parse_pair = parse_pair_song;
-		cmd->process = cmd_process_song;
 		cmd->answer.song = NULL;
 		break;
 	case MPD_CMD_STATUS:
 		cmd->parse_pair = parse_pair_status;
-		cmd->process = cmd_process_status;
 		cmd->answer.status = NULL;
 		break;
 	case MPD_CMD_STATS:
@@ -225,20 +223,6 @@ void mpd_cmd_free(struct mpd_cmd *cmd)
 	g_list_free(cmd->args);
 
 	g_free(cmd);
-}
-
-void cmd_process_song(union mpd_cmd_answer *answer)
-{
-	if (answer->song) {
-		sonatina_update_song(answer->song);
-	}
-}
-
-void cmd_process_status(union mpd_cmd_answer *answer)
-{
-	if (answer->status) {
-		sonatina_update_status(answer->status);
-	}
 }
 
 void cmd_process_idle(union mpd_cmd_answer *answer)

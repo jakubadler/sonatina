@@ -87,6 +87,9 @@ gboolean sonatina_connect(const char *host, int port)
 		tab->set_mpdsource(tab, sonatina.mpdsource);
 	}
 
+	mpd_source_register(sonatina.mpdsource, MPD_CMD_STATUS, sonatina_update_status, tab);
+	mpd_source_register(sonatina.mpdsource, MPD_CMD_CURRENTSONG, sonatina_update_song, tab);
+
 	mpd_send(sonatina.mpdsource, MPD_CMD_STATUS, NULL);
 	mpd_send(sonatina.mpdsource, MPD_CMD_PLINFO, NULL);
 	mpd_send(sonatina.mpdsource, MPD_CMD_CURRENTSONG, NULL);
@@ -152,8 +155,9 @@ gboolean sonatina_change_profile(const char *new)
 	return TRUE;
 }
 
-void sonatina_update_song(const struct mpd_song *song)
+void sonatina_update_song(GList *args, union mpd_cmd_answer *answer, void *data)
 {
+	const struct mpd_song *song = answer->song;
 	GObject *title;
 	GObject *subtitle;
 	gchar *format;
@@ -184,11 +188,17 @@ void sonatina_update_song(const struct mpd_song *song)
 	sonatina.cur = pos;
 }
 
-void sonatina_update_status(const struct mpd_status *status)
+void sonatina_update_status(GList *args, union mpd_cmd_answer *answer, void *data)
 {
+	const struct mpd_status *status = answer->status;
 	GObject *w;
 	int vol;
 	enum mpd_state state;
+	const char *mpd_err;
+
+	if (!status) {
+		return;
+	}
 
 	sonatina.cur = mpd_status_get_song_pos(status);
 
@@ -209,7 +219,6 @@ void sonatina_update_status(const struct mpd_status *status)
 	g_timer_stop(sonatina.counter);
 
 	/* state */
-	/* TODO: this is not an optimal solution as the butons blink while changing */
 	GObject *play;
 	GObject *pause;
 	state = mpd_status_get_state(status);
@@ -228,6 +237,11 @@ void sonatina_update_status(const struct mpd_status *status)
 		gtk_widget_show(GTK_WIDGET(pause));
 		g_timer_start(sonatina.counter);
 		break;
+	}
+
+	mpd_err = mpd_status_get_error(status);
+	if (mpd_err) {
+		MSG_ERROR("MPD: %s", mpd_err);
 	}
 }
 
