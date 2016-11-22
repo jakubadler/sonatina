@@ -167,25 +167,30 @@ void sonatina_update_song(GList *args, union mpd_cmd_answer *answer, void *data)
 	title = gtk_builder_get_object(sonatina.gui, "title");
 	subtitle = gtk_builder_get_object(sonatina.gui, "subtitle");
 
-	format = g_key_file_get_string(sonatina.rc, "main", "title", NULL);
-	str = song_attr_format(format, song);
-	if (str) {
-		gtk_label_set_text(GTK_LABEL(title), str);
-	}
-	g_free(format);
-	g_free(str);
+	if (song) {
+		format = g_key_file_get_string(sonatina.rc, "main", "title", NULL);
+		str = song_attr_format(format, song);
+		if (str) {
+			gtk_label_set_text(GTK_LABEL(title), str);
+		}
+		g_free(format);
+		g_free(str);
 
-	format = g_key_file_get_string(sonatina.rc, "main", "subtitle", NULL);
-	str = song_attr_format(format, song);
-	if (str) {
-		gtk_label_set_text(GTK_LABEL(subtitle), str);
-	}
-	 
-	g_free(format);
-	g_free(str);
+		format = g_key_file_get_string(sonatina.rc, "main", "subtitle", NULL);
+		str = song_attr_format(format, song);
+		if (str) {
+			gtk_label_set_text(GTK_LABEL(subtitle), str);
+		}
+		 
+		g_free(format);
+		g_free(str);
 
-	pos = mpd_song_get_pos(song);
-	sonatina.cur = pos;
+		pos = mpd_song_get_pos(song);
+		sonatina.cur = pos;
+	} else {
+		gtk_label_set_text(GTK_LABEL(title), _("Sonatina"));
+		gtk_label_set_text(GTK_LABEL(subtitle), _("Stopped"));
+	}
 }
 
 void sonatina_update_status(GList *args, union mpd_cmd_answer *answer, void *data)
