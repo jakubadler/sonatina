@@ -55,5 +55,6 @@ void connect_signals();
 void connect_action(GSimpleAction *action, GVariant *param, gpointer data);
 void quit_action(GSimpleAction *action, GVariant *param, gpointer data);
 void disconnect_action(GSimpleAction *action, GVariant *param, gpointer data);
+void db_update_action(GSimpleAction *action, GVariant *param, gpointer data);
 
 #endif

@@ -44,7 +44,7 @@ static GActionEntry library_selected_actions[] = {
 	{ "replace", library_replace_action, NULL, NULL, NULL }
 };
 
-static GActionEntry library_actions[] = {
+static GActionEntry library_selected_fs_actions[] = {
 	{ "update", library_update_action, NULL, NULL, NULL }
 };
 
@@ -112,11 +112,8 @@ void library_tab_set_source(struct sonatina_tab *tab, GSource *source)
 {
 	struct library_tab *libtab = (struct library_tab *) tab;
 	GObject *selector;
-	GObject *tw;
-	GSimpleActionGroup *actions;
 
 	selector = gtk_builder_get_object(libtab->ui, "selector");
-	tw = gtk_builder_get_object(libtab->ui, "tw");
 
 	libtab->mpdsource = source;
 	if (source) {
@@ -127,16 +124,10 @@ void library_tab_set_source(struct sonatina_tab *tab, GSource *source)
 		library_load(libtab);
 		gtk_widget_set_sensitive(GTK_WIDGET(selector), TRUE);
 		gtk_widget_set_sensitive(GTK_WIDGET(libtab->pathbar), TRUE);
-
-		actions = g_simple_action_group_new();
-		g_action_map_add_action_entries(G_ACTION_MAP(actions), library_actions, G_N_ELEMENTS(library_actions), libtab);
-		gtk_widget_insert_action_group(GTK_WIDGET(tw), "library", G_ACTION_GROUP(actions));
 	} else {
 		gtk_widget_set_sensitive(GTK_WIDGET(selector), FALSE);
 		gtk_widget_set_sensitive(GTK_WIDGET(libtab->pathbar), FALSE);
 		gtk_list_store_clear(libtab->store);
-
-		gtk_widget_insert_action_group(GTK_WIDGET(tw), "library", NULL);
 	}
 }
 
@@ -649,6 +640,7 @@ gboolean library_add_selected(struct library_tab *tab, GtkTreeSelection *selecti
 		gtk_tree_model_get(model, &iter, LIB_COL_NAME, &name, LIB_COL_URI, &uri, -1);
 		if (uri) {
 			retval = retval && library_add(tab, uri);
+			g_free(uri);
 		} else {
 			retval = retval && library_add(tab, name);
 		}
@@ -675,8 +667,14 @@ void library_selection_changed(GtkTreeSelection *selection, gpointer data)
 		actions = g_simple_action_group_new();
 		g_action_map_add_action_entries(G_ACTION_MAP(actions), library_selected_actions, G_N_ELEMENTS(library_selected_actions), tab);
 		gtk_widget_insert_action_group(GTK_WIDGET(tw), "library-selected", G_ACTION_GROUP(actions));
+		if (tab->path->type == LIBRARY_FS) {
+			actions = g_simple_action_group_new();
+			g_action_map_add_action_entries(G_ACTION_MAP(actions), library_selected_fs_actions, G_N_ELEMENTS(library_selected_fs_actions), tab);
+			gtk_widget_insert_action_group(GTK_WIDGET(tw), "library-selected-fs", G_ACTION_GROUP(actions));
+		}
 	} else {
 		gtk_widget_insert_action_group(GTK_WIDGET(tw), "library-selected", NULL);
+		gtk_widget_insert_action_group(GTK_WIDGET(tw), "library-selected-fs", NULL);
 	}
 
 	g_list_free_full(rows, (GDestroyNotify) gtk_tree_path_free);
@@ -716,12 +714,29 @@ void library_update_action(GSimpleAction *action, GVariant *param, gpointer data
 	struct library_tab *tab = (struct library_tab *) data;
 	GObject *tw;
 	GtkTreeSelection *select;
+	GtkTreeModel *model;
+	GtkTreeIter iter;
+	GList *rows;
+	GList *row;
+	gchar *uri;
 
-	MSG_INFO("Update action activated");
+	g_assert(tab->path->type == LIBRARY_FS);
 
 	tw = gtk_builder_get_object(tab->ui, "tw");
 	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(tw));
+	rows = gtk_tree_selection_get_selected_rows(select, &model);
 
-	mpd_send(tab->mpdsource, MPD_CMD_UPDATE, NULL);
-	library_add_selected(tab, select);
+	for (row = rows; row; row = row->next) {
+		if (!gtk_tree_model_get_iter(model, &iter, row->data)) {
+			continue;
+		}
+		gtk_tree_model_get(model, &iter, LIB_COL_URI, &uri, -1);
+		if (uri) {
+			mpd_send(tab->mpdsource, MPD_CMD_UPDATE, uri, NULL);
+			g_free(uri);
+		}
+	}
+
+	g_list_free_full(rows, (GDestroyNotify) gtk_tree_path_free);
 }
+

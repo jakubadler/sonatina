@@ -72,8 +72,8 @@
         <attribute name="action">library-selected.replace</attribute>
       </item>
       <item>
-        <attribute name="label" translatable="yes">Update library</attribute>
-        <attribute name="action">library.update</attribute>
+        <attribute name="label" translatable="yes">Update selected</attribute>
+        <attribute name="action">library-selected-fs.update</attribute>
       </item>
     </section>
   </menu>

@@ -297,6 +297,10 @@ audio-volume-medium-symbolic</property>
   </object>
   <menu id="menu">
     <section>
+      <item>
+        <attribute name="label" translatable="yes">Update library</attribute>
+        <attribute name="action">app.dbupdate</attribute>
+      </item>
       <submenu id="connmenu">
         <attribute name="label" translatable="yes">Connection</attribute>
       </submenu>

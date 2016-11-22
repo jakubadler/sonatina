@@ -10,6 +10,7 @@
 #define UIFILE DATADIR "/" PACKAGE "/" PACKAGE ".ui"
 
 static GActionEntry app_entries[] = {
+	{ "dbupdate", db_update_action, NULL, NULL, NULL },
 	{ "connect", connect_action, "s", "\"\"", connect_action },
 	{ "disconnect", disconnect_action, NULL, NULL, NULL },
 	{ "quit", quit_action, NULL, NULL, NULL }
@@ -302,3 +303,11 @@ void disconnect_action(GSimpleAction *action, GVariant *param, gpointer data)
 	sonatina_disconnect();
 }
 
+void db_update_action(GSimpleAction *action, GVariant *param, gpointer data)
+{
+	MSG_INFO("Update action activated");
+
+	if (sonatina.mpdsource) {
+		mpd_send(sonatina.mpdsource, MPD_CMD_UPDATE, NULL);
+	}
+}
