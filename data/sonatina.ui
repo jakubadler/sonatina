@@ -305,6 +305,10 @@ audio-volume-medium-symbolic</property>
         <attribute name="label" translatable="yes">Connection</attribute>
       </submenu>
       <item>
+        <attribute name="label" translatable="yes">Settings</attribute>
+        <attribute name="action">app.settings</attribute>
+      </item>
+      <item>
         <attribute name="label" translatable="yes">Quit</attribute>
         <attribute name="action">app.quit</attribute>
       </item>

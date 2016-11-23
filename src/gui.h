@@ -53,6 +53,7 @@ void connect_signals();
 
 /* Actions */
 void connect_action(GSimpleAction *action, GVariant *param, gpointer data);
+void settings_action(GSimpleAction *action, GVariant *param, gpointer data);
 void quit_action(GSimpleAction *action, GVariant *param, gpointer data);
 void disconnect_action(GSimpleAction *action, GVariant *param, gpointer data);
 void db_update_action(GSimpleAction *action, GVariant *param, gpointer data);

@@ -13,6 +13,7 @@ static GActionEntry app_entries[] = {
 	{ "dbupdate", db_update_action, NULL, NULL, NULL },
 	{ "connect", connect_action, "s", "\"\"", connect_action },
 	{ "disconnect", disconnect_action, NULL, NULL, NULL },
+	{ "settings", settings_action, NULL, NULL, NULL },
 	{ "quit", quit_action, NULL, NULL, NULL }
 };
 
@@ -291,6 +292,11 @@ void connect_action(GSimpleAction *action, GVariant *param, gpointer data)
 		sonatina_disconnect();
 	}
 	g_simple_action_set_state(action, param);
+}
+
+void settings_action(GSimpleAction *action, GVariant *param, gpointer data)
+{
+	MSG_INFO("Settings activated");
 }
 
 void quit_action(GSimpleAction *action, GVariant *param, gpointer data)
