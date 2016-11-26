@@ -11,6 +11,8 @@
 #define UIFILE DATADIR "/" PACKAGE "/" PACKAGE ".ui"
 #define SETTINGS_UIFILE DATADIR "/" PACKAGE "/" "settings.ui"
 
+#define WIDGET_MARGIN 4
+
 static GActionEntry app_entries[] = {
 	{ "dbupdate", db_update_action, NULL, NULL, NULL },
 	{ "connect", connect_action, "s", "\"\"", connect_action },
@@ -384,6 +386,7 @@ gboolean append_settings_toggle(GtkGrid *grid, const char *section, const char *
 
 	cb = gtk_check_button_new_with_label(e->label);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(cb), val.boolean);
+	g_object_set(G_OBJECT(cb), "margin", WIDGET_MARGIN, NULL);
 
 	g_signal_connect(G_OBJECT(cb), "toggle", G_CALLBACK(settings_toggle_cb), (gpointer) e);
 
@@ -410,7 +413,10 @@ gboolean append_settings_text(GtkGrid *grid, const char *section, const char *na
 
 	entry = gtk_entry_new();
 	gtk_entry_set_text(GTK_ENTRY(entry), val.string);
+	gtk_widget_set_hexpand(entry, TRUE);
 	label = gtk_label_new(e->label);
+	g_object_set(G_OBJECT(label), "margin", WIDGET_MARGIN, NULL);
+	gtk_widget_set_halign(label, GTK_ALIGN_START);
 
 	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(settings_entry_cb), (gpointer) e);
 
@@ -423,6 +429,7 @@ gboolean append_settings_text(GtkGrid *grid, const char *section, const char *na
 void prepare_settings_dialog()
 {
 	GObject *dialog;
+	GObject *parent;
 	GObject *grid;
 
 	if (!settings_ui) {
@@ -439,5 +446,8 @@ void prepare_settings_dialog()
 	append_settings_text(GTK_GRID(grid), "library", "format");
 	append_settings_text(GTK_GRID(grid), "main", "title");
 	append_settings_text(GTK_GRID(grid), "main", "subtitle");
+
+	parent = gtk_builder_get_object(sonatina.gui, "window");
+	gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(parent));
 }
 
