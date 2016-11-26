@@ -65,4 +65,25 @@ void db_update_action(GSimpleAction *action, GVariant *param, gpointer data);
   */
 void sonatina_set_labels(const char *title, const char *subtitle);
 
+/**
+  @brief Callback for check button used in settings dialog. It sets a boolean
+  type settings entry.
+  @param button Widget that emitted the signal.
+  @param data Pointer to struct settings_entry of the corresponding setting.
+  */
+void settings_toggle_cb(GtkToggleButton *button, gpointer data);
+
+/**
+  @brief Callback for GtkEntry used in settings dialog. It sets a string
+  type settings entry.
+  @param w Widget that emitted the signal.
+  @param data Pointer to struct settings_entry of the corresponding setting.
+  */
+void settings_entry_cb(GtkEntry *w, gpointer data);
+
+gboolean append_settings_toggle(GtkGrid *grid, const char *section, const char *name);
+gboolean append_settings_text(GtkGrid *grid, const char *section, const char *name);
+
+void prepare_settings_dialog();
+
 #endif

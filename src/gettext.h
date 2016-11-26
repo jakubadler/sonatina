@@ -10,4 +10,6 @@
 #	define _(x) (x)
 #endif
 
+#define __(x) (x)
+
 #endif

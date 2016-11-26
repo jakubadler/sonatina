@@ -5,9 +5,11 @@
 #include "client.h"
 #include "core.h"
 #include "util.h"
+#include "settings.h"
 #include "gettext.h"
 
 #define UIFILE DATADIR "/" PACKAGE "/" PACKAGE ".ui"
+#define SETTINGS_UIFILE DATADIR "/" PACKAGE "/" "settings.ui"
 
 static GActionEntry app_entries[] = {
 	{ "dbupdate", db_update_action, NULL, NULL, NULL },
@@ -16,6 +18,8 @@ static GActionEntry app_entries[] = {
 	{ "settings", settings_action, NULL, NULL, NULL },
 	{ "quit", quit_action, NULL, NULL, NULL }
 };
+
+GtkBuilder *settings_ui = NULL;
 
 void app_startup_cb(GtkApplication *app, gpointer user_data)
 {
@@ -32,6 +36,8 @@ void app_startup_cb(GtkApplication *app, gpointer user_data)
 	win = gtk_builder_get_object(sonatina.gui, "window");
 	g_signal_connect(win, "delete-event", G_CALLBACK(gtk_widget_hide_on_delete), NULL);
 	gtk_application_add_window(app, GTK_WINDOW(win));
+
+	prepare_settings_dialog();
 
 	connect_signals();
 
@@ -296,7 +302,12 @@ void connect_action(GSimpleAction *action, GVariant *param, gpointer data)
 
 void settings_action(GSimpleAction *action, GVariant *param, gpointer data)
 {
+	GObject *win;
+
 	MSG_INFO("Settings activated");
+
+	win = gtk_builder_get_object(settings_ui, "settings_dialog");
+	gtk_widget_show_all(GTK_WIDGET(win));
 }
 
 void quit_action(GSimpleAction *action, GVariant *param, gpointer data)
@@ -331,5 +342,102 @@ void sonatina_set_labels(const char *title, const char *subtitle)
 		label = gtk_builder_get_object(sonatina.gui, "subtitle");
 		gtk_label_set_text(GTK_LABEL(label), subtitle);
 	}
+}
+
+void settings_toggle_cb(GtkToggleButton *button, gpointer data)
+{
+	const struct settings_entry *entry = (const struct settings_entry *) data;
+	union settings_value val;
+
+	g_assert(entry != NULL);
+
+	val.boolean = gtk_toggle_button_get_active(button);
+	sonatina_settings_set(entry->section, entry->name, val);
+}
+
+void settings_entry_cb(GtkEntry *w, gpointer data)
+{
+	const struct settings_entry *entry = (const struct settings_entry *) data;
+	union settings_value val;
+
+	g_assert(entry != NULL);
+
+	val.string = g_strdup(gtk_entry_get_text(w));
+	sonatina_settings_set(entry->section, entry->name, val);
+	g_free(val.string);
+}
+
+gboolean append_settings_toggle(GtkGrid *grid, const char *section, const char *name)
+{
+	GtkWidget *cb;
+	const struct settings_entry *e;
+	union settings_value val;
+
+	e = settings_lookup(section, name, SETTINGS_BOOL);
+
+	if (!e) {
+		MSG_ERROR("Couldn't create toggle widget for settings entry %s/%s: undefine settings entry", section, name);
+		return FALSE;
+	}
+
+	sonatina_settings_get(section, name, &val);
+
+	cb = gtk_check_button_new_with_label(e->label);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(cb), val.boolean);
+
+	g_signal_connect(G_OBJECT(cb), "toggle", G_CALLBACK(settings_toggle_cb), (gpointer) e);
+
+	gtk_grid_attach_next_to(grid, cb, NULL, GTK_POS_BOTTOM, 1, 1);
+
+	return TRUE;
+}
+
+gboolean append_settings_text(GtkGrid *grid, const char *section, const char *name)
+{
+	GtkWidget *label;
+	GtkWidget *entry;
+	const struct settings_entry *e;
+	union settings_value val;
+
+	e = settings_lookup(section, name, SETTINGS_STRING);
+
+	if (!e) {
+		MSG_ERROR("Couldn't create entry widget for settings entry %s/%s: undefine settings entry", section, name);
+		return FALSE;
+	}
+
+	sonatina_settings_get(section, name, &val);
+
+	entry = gtk_entry_new();
+	gtk_entry_set_text(GTK_ENTRY(entry), val.string);
+	label = gtk_label_new(e->label);
+
+	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(settings_entry_cb), (gpointer) e);
+
+	gtk_grid_attach_next_to(grid, label, NULL, GTK_POS_BOTTOM, 1, 1);
+	gtk_grid_attach_next_to(grid, entry, label, GTK_POS_RIGHT, 1, 1);
+
+	return TRUE;
+}
+
+void prepare_settings_dialog()
+{
+	GObject *dialog;
+	GObject *grid;
+
+	if (!settings_ui) {
+		settings_ui = gtk_builder_new();
+		gtk_builder_add_from_file(settings_ui, SETTINGS_UIFILE, NULL);
+	}
+
+	dialog = gtk_builder_get_object(settings_ui, "settings_dialog");
+	g_signal_connect_swapped(dialog, "response", G_CALLBACK(gtk_widget_hide), dialog);
+
+	/* Format frame */
+	grid = gtk_builder_get_object(settings_ui, "format_grid");
+	append_settings_text(GTK_GRID(grid), "playlist", "format");
+	append_settings_text(GTK_GRID(grid), "library", "format");
+	append_settings_text(GTK_GRID(grid), "main", "title");
+	append_settings_text(GTK_GRID(grid), "main", "subtitle");
 }
 
