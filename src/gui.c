@@ -311,3 +311,19 @@ void db_update_action(GSimpleAction *action, GVariant *param, gpointer data)
 		mpd_send(sonatina.mpdsource, MPD_CMD_UPDATE, NULL);
 	}
 }
+
+void sonatina_set_labels(const char *title, const char *subtitle)
+{
+	GObject *label;
+
+	if (title) {
+		label = gtk_builder_get_object(sonatina.gui, "title");
+		gtk_label_set_text(GTK_LABEL(label), title);
+	}
+
+	if (subtitle) {
+		label = gtk_builder_get_object(sonatina.gui, "subtitle");
+		gtk_label_set_text(GTK_LABEL(label), subtitle);
+	}
+}
+

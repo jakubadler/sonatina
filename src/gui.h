@@ -57,4 +57,11 @@ void quit_action(GSimpleAction *action, GVariant *param, gpointer data);
 void disconnect_action(GSimpleAction *action, GVariant *param, gpointer data);
 void db_update_action(GSimpleAction *action, GVariant *param, gpointer data);
 
+/**
+  @brief Set text of labels in Sonatina's header.
+  @param title First line.
+  @param subtitle Second line.
+  */
+void sonatina_set_labels(const char *title, const char *subtitle);
+
 #endif

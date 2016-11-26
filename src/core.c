@@ -11,6 +11,7 @@
 
 #include "playlist.h"
 #include "library.h"
+#include "gui.h"
 #include "gettext.h"
 
 struct sonatina_instance sonatina;
@@ -118,6 +119,8 @@ void sonatina_disconnect()
 
 	sonatina.mpdsource = NULL;
 	sonatina.cur = -1;
+
+	sonatina_set_labels(_("Sonatina"), _("Disconnected"));
 }
 
 gboolean sonatina_change_profile(const char *new)
@@ -158,20 +161,15 @@ gboolean sonatina_change_profile(const char *new)
 void sonatina_update_song(GList *args, union mpd_cmd_answer *answer, void *data)
 {
 	const struct mpd_song *song = answer->song;
-	GObject *title;
-	GObject *subtitle;
 	gchar *format;
 	gchar *str;
 	int pos;
-
-	title = gtk_builder_get_object(sonatina.gui, "title");
-	subtitle = gtk_builder_get_object(sonatina.gui, "subtitle");
 
 	if (song) {
 		format = g_key_file_get_string(sonatina.rc, "main", "title", NULL);
 		str = song_attr_format(format, song);
 		if (str) {
-			gtk_label_set_text(GTK_LABEL(title), str);
+			sonatina_set_labels(str, NULL);
 		}
 		g_free(format);
 		g_free(str);
@@ -179,7 +177,7 @@ void sonatina_update_song(GList *args, union mpd_cmd_answer *answer, void *data)
 		format = g_key_file_get_string(sonatina.rc, "main", "subtitle", NULL);
 		str = song_attr_format(format, song);
 		if (str) {
-			gtk_label_set_text(GTK_LABEL(subtitle), str);
+			sonatina_set_labels(NULL, str);
 		}
 		 
 		g_free(format);
@@ -188,8 +186,7 @@ void sonatina_update_song(GList *args, union mpd_cmd_answer *answer, void *data)
 		pos = mpd_song_get_pos(song);
 		sonatina.cur = pos;
 	} else {
-		gtk_label_set_text(GTK_LABEL(title), _("Sonatina"));
-		gtk_label_set_text(GTK_LABEL(subtitle), _("Stopped"));
+		sonatina_set_labels(_("Sonatina"), _("Stopped"));
 	}
 }
 
