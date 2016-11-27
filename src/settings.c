@@ -11,7 +11,9 @@
 
 gchar *rcdir;
 gchar *rcfile;
-gchar *profiledir;
+gchar *profilesfile;
+
+GKeyFile *profiles;
 
 struct settings_entry settings[] = {
 	{ "main", "title", SETTINGS_STRING, __("Song line 1"), NULL },
@@ -30,14 +32,12 @@ void sonatina_settings_prepare()
 	}
 
 	if (!rcfile) {
-		rcfile = g_build_filename(g_get_user_config_dir(), PACKAGE, "sonatinarc", NULL);
+		rcfile = g_build_filename(rcdir, "sonatinarc", NULL);
 	}
 
-	if (!profiledir) {
-		profiledir = g_build_filename(g_get_user_config_dir(), PACKAGE, "profiles", NULL);
+	if (!profilesfile) {
+		profilesfile = g_build_filename(rcdir, "profiles.ini", NULL);
 	}
-
-	g_mkdir_with_parents(profiledir, 0744);
 
 	for (i = 0; settings[i].section; i++) {
 		if (settings[i].label) {
@@ -63,10 +63,9 @@ void sonatina_settings_default(GKeyFile *rc)
 
 gboolean sonatina_settings_load()
 {
-	gchar *path;
-	gchar **profiles;
-	gsize nprofiles, i;
-	GKeyFile *profile;
+	gchar **profnames;
+	size_t i;
+	struct sonatina_profile *profile = NULL;
 
 	sonatina_settings_prepare();
 	
@@ -78,73 +77,76 @@ gboolean sonatina_settings_load()
 	                                 G_KEY_FILE_KEEP_COMMENTS |
 	                                 G_KEY_FILE_KEEP_TRANSLATIONS, NULL);
 
-	profiles = g_key_file_get_string_list(sonatina.rc, "main", "profiles", &nprofiles, NULL);
-
 	if (!profiles) {
-		MSG_INFO("no profiles set; adding default");
-		sonatina_add_profile("localhost", "localhost", 6600);
-		profiles = g_key_file_get_string_list(sonatina.rc, "main", "profiles", &nprofiles, NULL);
+		profiles = g_key_file_new();
 	}
 
+	g_key_file_load_from_file(profiles, profilesfile,
+			G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS,
+			NULL);
+
+	profnames = g_key_file_get_groups(profiles, NULL);
 	sonatina.profiles = NULL;
-
-	for (i = 0; i < nprofiles; i++) {
-		path = g_build_filename(profiledir, profiles[i], NULL);
-		MSG_INFO("loading profile '%s'", path);
-		profile = g_key_file_new();
-		g_key_file_load_from_file(profile, path,
-		                          G_KEY_FILE_KEEP_COMMENTS |
-		                          G_KEY_FILE_KEEP_TRANSLATIONS, NULL);
-		sonatina.profiles = g_list_append(sonatina.profiles, profile);
+	for (i = 0; profnames[i]; i++) {
+		if (!profile) {
+			profile = g_malloc(sizeof(struct sonatina_profile));
+		}
+		profile->name = g_strdup(profnames[i]);
+		profile->host = g_key_file_get_string(profiles, profnames[i], "host", NULL);
+		profile->port = g_key_file_get_integer(profiles, profnames[i], "port", NULL);
+		profile->password = g_key_file_get_string(profiles, profnames[i], "password", NULL);
+		if (profile->host) {
+			sonatina.profiles = g_list_append(sonatina.profiles, profile);
+			profile = NULL;
+		}
 	}
 
-	g_strfreev(profiles);
+	g_strfreev(profnames);
 
 	return TRUE;
 }
 
 void sonatina_settings_save()
 {
-	GList *cur;
-	gchar *profile;
-
 	g_key_file_save_to_file(sonatina.rc, rcfile, NULL);
+	g_key_file_save_to_file(profiles, profilesfile, NULL);
+}
 
-	for (cur = sonatina.profiles; cur; cur = cur->next) {
-		profile = g_strdup_printf("%s/%s", profiledir, g_key_file_get_string(cur->data, "profile", "name", NULL));
-		g_key_file_save_to_file(cur->data, profile, NULL);
-		g_free(profile);
+void sonatina_add_profile(const char *name, const char *host, int port, const char *password)
+{
+	struct sonatina_profile *profile;
+
+	g_assert(name != NULL);
+	g_assert(host != NULL);
+
+	profile = g_malloc(sizeof(struct sonatina_profile));
+
+	profile->name = g_strdup(name);
+	profile->host = g_strdup(host);
+	profile->port = port;
+	if (password) {
+		profile->password = g_strdup(password);
+	} else {
+		profile->password = NULL;
+	}
+
+	sonatina.profiles = g_list_append(sonatina.profiles, profile);
+
+	g_key_file_set_string(profiles, name, "host", host);
+	g_key_file_set_integer(profiles, name, "port", port);
+	if (password) {
+		g_key_file_set_string(profiles, name, "password", password);
 	}
 }
 
-
-
-void sonatina_add_profile(const char *name, const char *host, int port)
-{
-	gchar *path;
-	GKeyFile *profile;
-
-	path = g_build_filename(profiledir, name, NULL);
-
-	profile = g_key_file_new();
-	g_key_file_load_from_file(profile, path,
-	                          G_KEY_FILE_KEEP_COMMENTS |
-	                          G_KEY_FILE_KEEP_TRANSLATIONS, NULL);
-	g_key_file_set_string(profile, "profile", "name", name);
-	g_key_file_set_string(profile, "profile", "host", host);
-	g_key_file_set_integer(profile, "profile", "port", port);
-
-	sonatina.profiles = g_list_append(sonatina.profiles, profile);
-}
-
-GKeyFile *sonatina_get_profile(const char *name)
+const struct sonatina_profile *sonatina_get_profile(const char *name)
 {
 	GList *cur;
-	GKeyFile *profile;
+	struct sonatina_profile *profile;
 
 	for (cur = sonatina.profiles; cur; cur = cur->next) {
-		profile = (GKeyFile *) cur->data;
-		if (!g_strcmp0(g_key_file_get_string(profile, "profile", "name", NULL), name)) {
+		profile = (struct sonatina_profile *) cur->data;
+		if (!g_strcmp0(profile->name, name)) {
 			return profile;
 		}
 	}
@@ -245,5 +247,24 @@ const struct settings_entry *settings_lookup(const char *section, const char *na
 	}
 
 	return NULL;
+}
+
+void sonatina_profile_free(struct sonatina_profile *profile)
+{
+	g_assert(profile != NULL);
+
+	if (profile->name) {
+		g_free(profile->name);
+	}
+
+	if (profile->host) {
+		g_free(profile->host);
+	}
+
+	if (profile->password) {
+		g_free(profile->password);
+	}
+
+	g_free(profile);
 }
 

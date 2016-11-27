@@ -170,17 +170,15 @@ GtkWidget *sonatina_menu(GMenuModel *specific)
 	GObject *sonatina_menu;
 	GObject *connmenu;
 	GList *profile;
-	gchar *name;
+	const gchar *name;
 	gchar *action;
 
 	connmenu = gtk_builder_get_object(sonatina.gui, "connmenu");
 	g_menu_remove_all(G_MENU(connmenu));
 	for (profile = sonatina.profiles; profile; profile = profile->next) {
-		name = g_key_file_get_string(profile->data,
-				"profile", "name", NULL);
+		name = ((const struct sonatina_profile *) profile->data)->name;
 		action = g_strdup_printf("%s::%s", "app.connect", name);
 		g_menu_append(G_MENU(connmenu), name, action);
-		g_free(name);
 		g_free(action);
 	}
 
