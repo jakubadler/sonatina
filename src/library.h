@@ -247,4 +247,6 @@ void library_replace_action(GSimpleAction *action, GVariant *param, gpointer dat
 
 void library_update_action(GSimpleAction *action, GVariant *param, gpointer data);
 
+void library_set_busy(struct library_tab *tab, gboolean busy);
+
 #endif

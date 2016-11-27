@@ -135,7 +135,6 @@ void library_list_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 {
 	struct library_tab *tab = (struct library_tab *) data;
 	GList *cur;
-	GObject *tw;
 	enum listing_type type;
 
 	if (!args) {
@@ -160,8 +159,7 @@ void library_list_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 		library_model_append(tab->store, type, cur->data, NULL);
 	}
 
-	tw = gtk_builder_get_object(tab->ui, "tw");
-	gtk_widget_set_sensitive(GTK_WIDGET(tw), TRUE);
+	library_set_busy(tab, FALSE);
 }
 
 void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
@@ -170,7 +168,6 @@ void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 	const char *uri_arg;
 	gchar *uri;
 	GList *cur;
-	GObject *tw;
 
 	if (!tab->root) {
 		return;
@@ -208,8 +205,7 @@ void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 		library_model_append_entity(tab->store, cur->data);
 	}
 
-	tw = gtk_builder_get_object(tab->ui, "tw");
-	gtk_widget_set_sensitive(GTK_WIDGET(tw), TRUE);
+	library_set_busy(tab, FALSE);
 
 }
 
@@ -371,6 +367,8 @@ gboolean library_load(struct library_tab *tab)
 	gchar *uri;
 	gboolean retval = FALSE;
 
+	library_set_busy(tab, TRUE);
+
 	switch (tab->path->type) {
 	case LIBRARY_FS:
 		uri = library_path_get_uri(tab->root, tab->path);
@@ -480,7 +478,6 @@ gboolean library_add(struct library_tab *tab, const char *name)
 void library_tab_open_dir(struct library_tab *tab, const char *name)
 {
 	struct library_path *path;
-	GObject *tw;
 	const char *icon;
 
 	path = library_path_open(tab->path, name);
@@ -494,8 +491,6 @@ void library_tab_open_dir(struct library_tab *tab, const char *name)
 		icon = listing_icons[path->type];
 	}
 	sonatina_path_bar_open(tab->pathbar, name, icon);
-	tw = gtk_builder_get_object(tab->ui, "tw");
-	gtk_widget_set_sensitive(GTK_WIDGET(tw), FALSE);
 	library_load(tab);
 }
 
@@ -503,7 +498,6 @@ void library_tab_open_pos(struct library_tab *tab, int pos)
 {
 	struct library_path *path;
 	int i;
-	GObject *tw;
 
 	for (path = tab->root, i = 0; path; path = path->next, i++) {
 		if (i == pos) break;
@@ -513,8 +507,6 @@ void library_tab_open_pos(struct library_tab *tab, int pos)
 		return;
 	}
 	tab->path = path;
-	tw = gtk_builder_get_object(tab->ui, "tw");
-	gtk_widget_set_sensitive(GTK_WIDGET(tw), FALSE);
 	library_load(tab);
 }
 
@@ -738,5 +730,13 @@ void library_update_action(GSimpleAction *action, GVariant *param, gpointer data
 	}
 
 	g_list_free_full(rows, (GDestroyNotify) gtk_tree_path_free);
+}
+
+void library_set_busy(struct library_tab *tab, gboolean busy)
+{
+	GObject *spinner;
+
+	spinner = gtk_builder_get_object(tab->ui, "spinner");
+	g_object_set(spinner, "active", busy, NULL);
 }
 
