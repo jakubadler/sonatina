@@ -33,6 +33,11 @@ void app_startup_cb(GtkApplication *app, gpointer user_data)
 	sonatina.gui = gtk_builder_new();
 	gtk_builder_add_from_file(sonatina.gui, UIFILE, NULL);
 
+	if (!settings_ui) {
+		settings_ui = gtk_builder_new();
+		gtk_builder_add_from_file(settings_ui, SETTINGS_UIFILE, NULL);
+	}
+
 	sonatina_init();
 
 	win = gtk_builder_get_object(sonatina.gui, "window");
@@ -281,6 +286,20 @@ void connect_signals()
 	gtk_widget_add_events(GTK_WIDGET(w), GDK_BUTTON_PRESS_MASK);
 	g_signal_connect(w, "button-press-event", G_CALLBACK(timeline_clicked_cb), NULL);
 
+	/* settings */
+	w = gtk_builder_get_object(settings_ui, "profile_name_entry");
+	g_signal_connect(w, "activate", G_CALLBACK(profile_entry_cb), NULL);
+	w = gtk_builder_get_object(settings_ui, "host_entry");
+	g_signal_connect(w, "activate", G_CALLBACK(profile_entry_cb), NULL);
+	w = gtk_builder_get_object(settings_ui, "port_entry");
+	g_signal_connect(w, "activate", G_CALLBACK(profile_entry_cb), NULL);
+	w = gtk_builder_get_object(settings_ui, "password_entry");
+	g_signal_connect(w, "activate", G_CALLBACK(profile_entry_cb), NULL);
+
+	w = gtk_builder_get_object(settings_ui, "profile_add_button");
+	g_signal_connect(w, "clicked", G_CALLBACK(add_profile_cb), NULL);
+	w = gtk_builder_get_object(settings_ui, "profile_remove_button");
+	g_signal_connect(w, "clicked", G_CALLBACK(remove_profile_cb), NULL);
 }
 
 void connect_action(GSimpleAction *action, GVariant *param, gpointer data)
@@ -429,14 +448,16 @@ void prepare_settings_dialog()
 	GObject *dialog;
 	GObject *parent;
 	GObject *grid;
-
-	if (!settings_ui) {
-		settings_ui = gtk_builder_new();
-		gtk_builder_add_from_file(settings_ui, SETTINGS_UIFILE, NULL);
-	}
+	GObject *chooser;
+	GtkCellRenderer *renderer;
+	GObject *model;
 
 	dialog = gtk_builder_get_object(settings_ui, "settings_dialog");
 	g_signal_connect_swapped(dialog, "response", G_CALLBACK(gtk_widget_hide), dialog);
+
+	/* set dialog's parent */
+	parent = gtk_builder_get_object(sonatina.gui, "window");
+	gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(parent));
 
 	/* Format frame */
 	grid = gtk_builder_get_object(settings_ui, "format_grid");
@@ -445,7 +466,158 @@ void prepare_settings_dialog()
 	append_settings_text(GTK_GRID(grid), "main", "title");
 	append_settings_text(GTK_GRID(grid), "main", "subtitle");
 
-	parent = gtk_builder_get_object(sonatina.gui, "window");
-	gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(parent));
+	model = gtk_builder_get_object(settings_ui, "profile_chooser_model");
+	chooser = gtk_builder_get_object(settings_ui, "profile_chooser");
+	renderer = gtk_cell_renderer_text_new();
+	gtk_combo_box_set_model(GTK_COMBO_BOX(chooser), GTK_TREE_MODEL(model));
+	gtk_combo_box_set_id_column(GTK_COMBO_BOX(chooser), 0);
+	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(chooser), renderer, TRUE);
+	gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(chooser), renderer, "text", 0, NULL);
+	g_signal_connect(chooser, "changed", G_CALLBACK(chooser_changed_cb), NULL);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(chooser), 0);
+}
+
+void chooser_changed_cb(GtkComboBox *combo, gpointer data)
+{
+	GObject *entry;
+	const struct sonatina_profile *profile;
+
+	profile = sonatina_get_profile(gtk_combo_box_get_active_id(combo));
+
+	if (!profile) {
+		return;
+	}
+
+	entry = gtk_builder_get_object(settings_ui, "profile_name_entry");
+	gtk_entry_set_text(GTK_ENTRY(entry), profile->name);
+
+	entry = gtk_builder_get_object(settings_ui, "host_entry");
+	gtk_entry_set_text(GTK_ENTRY(entry), profile->host);
+
+	entry = gtk_builder_get_object(settings_ui, "port_entry");
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry), profile->port);
+
+	if (profile->password) {
+		entry = gtk_builder_get_object(settings_ui, "password_entry");
+		gtk_entry_set_text(GTK_ENTRY(entry), profile->password);
+	}
+}
+
+void chooser_add_profile(const char *name)
+{
+	GObject *model;
+
+	model = gtk_builder_get_object(settings_ui, "profile_chooser_model");
+	gtk_list_store_insert_with_values(GTK_LIST_STORE(model), NULL, -1, 0, name, -1);
+}
+
+void chooser_remove_profile(const char *name)
+{
+	GObject *chooser;
+	GObject *model;
+	GtkTreeIter iter;
+
+	model = gtk_builder_get_object(settings_ui, "profile_chooser_model");
+	chooser = gtk_builder_get_object(settings_ui, "profile_chooser");
+
+	if (!gtk_combo_box_get_active_iter(GTK_COMBO_BOX(chooser), &iter)) {
+		return;
+	}
+
+	gtk_list_store_remove(GTK_LIST_STORE(model), &iter);
+
+	/* TODO: select something */
+}
+
+void profile_entry_cb(GtkEntry *w, gpointer data)
+{
+	GObject *chooser;
+	GtkTreeIter iter;
+	const gchar *id;
+	const gchar *name;
+	struct sonatina_profile profile;
+
+	chooser = gtk_builder_get_object(settings_ui, "profile_chooser");
+	name = gtk_combo_box_get_active_id(GTK_COMBO_BOX(chooser));
+
+	if (!gtk_combo_box_get_active_iter(GTK_COMBO_BOX(chooser), &iter)) {
+		return;
+	}
+
+	id = gtk_buildable_get_name(GTK_BUILDABLE(w));
+	MSG_DEBUG("entry '%s' activated", id);
+
+	profile.name = NULL;
+	profile.host = NULL;
+	profile.port = -1;
+	profile.password = NULL;
+
+	if (!g_strcmp0(id, "profile_name_entry")) {
+		profile.name = gtk_entry_get_text(GTK_ENTRY(w));
+	} else if (!g_strcmp0(id, "host_entry")) {
+		profile.host = gtk_entry_get_text(GTK_ENTRY(w));
+	} else if (!g_strcmp0(id, "port_entry")) {
+		profile.port = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(w));
+	} else if (!g_strcmp0(id, "password_entry")) {
+		profile.password = gtk_entry_get_text(GTK_ENTRY(w));
+	}
+
+	sonatina_modify_profile(name, &profile);
+}
+
+#define DEFAULT_NEW_PROFILE _("New profile")
+#define DEFAULT_NEW_PROFILE_N _("New profile %d")
+#define DEFAULT_HOST "localhost"
+#define DEFAULT_PORT 6600
+#define DEFAULT_PASSWORD ""
+
+gchar *create_profile_name()
+{
+	gchar *name;
+	int i;
+
+	if (!sonatina_get_profile(DEFAULT_NEW_PROFILE)) {
+		return g_strdup(DEFAULT_NEW_PROFILE);
+	}
+
+	for (i = 1; i <= INT_MAX; i++) {
+		name = g_strdup_printf(DEFAULT_NEW_PROFILE_N, i);
+		if (!sonatina_get_profile(name)) {
+			return name;
+		}
+	}
+
+	return NULL;
+}
+
+void add_profile_cb(GtkButton *button, gpointer data)
+{
+	GObject *chooser;
+	GObject *entry;
+	gchar *name;
+
+	chooser = gtk_builder_get_object(settings_ui, "profile_chooser");
+	name = create_profile_name();
+
+	if (!name) {
+		MSG_ERROR("Coudn't create new profile");
+		return;
+	}
+
+	sonatina_add_profile(name, DEFAULT_HOST, DEFAULT_PORT, DEFAULT_PASSWORD);
+	gtk_combo_box_set_active_id(GTK_COMBO_BOX(chooser), name);
+	g_free(name);
+}
+
+void remove_profile_cb(GtkButton *button, gpointer data)
+{
+	GObject *chooser;
+	GObject *entry;
+	gchar *name;
+
+	chooser = gtk_builder_get_object(settings_ui, "profile_chooser");
+	name = gtk_combo_box_get_active_id(GTK_COMBO_BOX(chooser));
+
+	sonatina_remove_profile(name);
 }
 

@@ -63,6 +63,11 @@ void sonatina_settings_save();
   */
 void sonatina_add_profile(const char *name, const char *host, int port, const char *password);
 
+gboolean sonatina_modify_profile(const char *name, const struct sonatina_profile *new);
+gboolean sonatina_remove_profile(const char *name);
+
+GList *sonatina_lookup_profile(const char *name);
+
 /**
   @brief Get connection profile by name.
   @param name Name of the profile.

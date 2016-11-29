@@ -7,6 +7,12 @@
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
+  <object class="GtkListStore" id="profile_chooser_model">
+    <columns>
+      <!-- column-name text -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
   <object class="GtkDialog" id="settings_dialog">
     <property name="can_focus">False</property>
     <property name="type_hint">dialog</property>
@@ -93,17 +99,6 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkEntry" id="profile_name_entry">
-                                <property name="visible">True</property>
-                                <property name="can_focus">True</property>
-                                <property name="hexpand">True</property>
-                              </object>
-                              <packing>
-                                <property name="left_attach">1</property>
-                                <property name="top_attach">0</property>
-                              </packing>
-                            </child>
-                            <child>
                               <object class="GtkLabel">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
@@ -184,6 +179,17 @@
                                 <property name="top_attach">2</property>
                               </packing>
                             </child>
+                            <child>
+                              <object class="GtkEntry" id="profile_name_entry">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="hexpand">True</property>
+                              </object>
+                              <packing>
+                                <property name="left_attach">1</property>
+                                <property name="top_attach">0</property>
+                              </packing>
+                            </child>
                           </object>
                         </child>
                       </object>
@@ -194,9 +200,10 @@
                         <property name="can_focus">False</property>
                         <property name="spacing">2</property>
                         <child>
-                          <object class="GtkComboBox">
+                          <object class="GtkComboBox" id="profile_chooser">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
+                            <property name="model">profile_chooser_model</property>
                           </object>
                           <packing>
                             <property name="expand">False</property>
