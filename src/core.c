@@ -8,6 +8,7 @@
 #include "util.h"
 #include "songattr.h"
 #include "settings.h"
+#include "profile.h"
 
 #include "playlist.h"
 #include "library.h"
@@ -25,6 +26,8 @@ void sonatina_init()
 	sonatina.mpdsource = NULL;
 	sonatina_settings_load(&sonatina);
 	sonatina_settings_default(sonatina.rc);
+
+	sonatina_profiles_load();
 
 	sonatina.elapsed = 0;
 	sonatina.total = 0;
@@ -45,20 +48,14 @@ void sonatina_init()
 
 void sonatina_destroy()
 {
-	GList *cur;
 	GObject *w;
 
 	MSG_DEBUG("sonatina_destroy()");
 
 	sonatina_settings_save();
+	sonatina_profiles_save();
 
 	g_key_file_free(sonatina.rc);
-
-	for (cur = sonatina.profiles; cur; cur = cur->next) {
-		g_key_file_free(cur->data);
-	}
-
-	g_list_free(sonatina.profiles);
 
 	w = gtk_builder_get_object(sonatina.gui, "window");
 	gtk_widget_destroy(GTK_WIDGET(w));
@@ -125,10 +122,7 @@ void sonatina_disconnect()
 
 gboolean sonatina_change_profile(const char *new)
 {
-	GKeyFile *profile;
-	gchar *host;
-	gchar *name;
-	gint port;
+	const struct sonatina_profile *profile;
 
 	profile = sonatina_get_profile(new);
 
@@ -141,18 +135,9 @@ gboolean sonatina_change_profile(const char *new)
 		sonatina_disconnect();
 	}
 
-	name = g_key_file_get_string(profile, "profile", "name", NULL);
-	host = g_key_file_get_string(profile, "profile", "host", NULL);
-	port = g_key_file_get_integer(profile, "profile", "port", NULL);
-
-	g_assert(name != NULL);
-	g_assert(host != NULL);
-
-	MSG_INFO("changing profile to %s", name);
-	if (sonatina_connect(host, port)) {
-		g_key_file_set_string(sonatina.rc, "main", "active_profile", name);
-		g_free(name);
-		g_free(host);
+	MSG_INFO("changing profile to %s", profile->name);
+	if (sonatina_connect(profile->host, profile->port)) {
+		g_key_file_set_string(sonatina.rc, "main", "active_profile", profile->name);
 	}
 
 	return TRUE;

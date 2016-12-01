@@ -31,8 +31,8 @@ clean:
 	make -C po clean
 
 update-po:
-	xgettext -d ${PACKAGE} -k_ -p po --language=C src/*.c
-	xgettext -d ${PACKAGE} -k_ -p po -j data/*.ui
+	xgettext -d ${PACKAGE} -k_ -k__ -p po --language=C src/*.c
+	xgettext -d ${PACKAGE} -k_ -k__ -p po -j data/*.ui
 	mv po/${PACKAGE}.po po/${PACKAGE}.pot
 
 test:

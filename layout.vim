@@ -3,6 +3,9 @@ o src/main.c
 tabnew src/core.c
 split src/core.h
 
+tabnew src/profile.c
+split src/profile.h
+
 tabnew src/settings.c
 split src/settings.h
 

@@ -16,7 +16,6 @@ struct sonatina_instance {
 
 	GtkBuilder *gui;
 	GKeyFile *rc;
-	GList *profiles; /** List of GKeyFile objects representing available profiles */
 	GList *tabs;
 
 	int cur;
@@ -102,10 +101,6 @@ void sonatina_disconnect();
   */
 gboolean sonatina_change_profile(const char *name);
 
-/**
-  @brief 
-  @param song MPD song struct.
-  */
 /**
   @brief Callback for MPD command currentsong. Update current song on a sonatina instance.
   @param args MPD command argument list.

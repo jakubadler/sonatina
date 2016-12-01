@@ -53,6 +53,7 @@ void connect_signals();
 
 /* Actions */
 void connect_action(GSimpleAction *action, GVariant *param, gpointer data);
+void settings_action(GSimpleAction *action, GVariant *param, gpointer data);
 void quit_action(GSimpleAction *action, GVariant *param, gpointer data);
 void disconnect_action(GSimpleAction *action, GVariant *param, gpointer data);
 void db_update_action(GSimpleAction *action, GVariant *param, gpointer data);
@@ -63,5 +64,32 @@ void db_update_action(GSimpleAction *action, GVariant *param, gpointer data);
   @param subtitle Second line.
   */
 void sonatina_set_labels(const char *title, const char *subtitle);
+
+/**
+  @brief Callback for check button used in settings dialog. It sets a boolean
+  type settings entry.
+  @param button Widget that emitted the signal.
+  @param data Pointer to struct settings_entry of the corresponding setting.
+  */
+void settings_toggle_cb(GtkToggleButton *button, gpointer data);
+
+/**
+  @brief Callback for GtkEntry used in settings dialog. It sets a string
+  type settings entry.
+  @param w Widget that emitted the signal.
+  @param data Pointer to struct settings_entry of the corresponding setting.
+  */
+void settings_entry_cb(GtkEntry *w, gpointer data);
+
+gboolean append_settings_toggle(GtkGrid *grid, const char *section, const char *name);
+gboolean append_settings_text(GtkGrid *grid, const char *section, const char *name);
+
+void prepare_settings_dialog();
+void chooser_add_profile(const char *name);
+void chooser_remove_profile(const char *name);
+void chooser_changed_cb(GtkComboBox *combo, gpointer data);
+void profile_entry_cb(GtkEntry *w, gpointer data);
+void add_profile_cb(GtkButton *button, gpointer data);
+void remove_profile_cb(GtkButton *button, gpointer data);
 
 #endif
