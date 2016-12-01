@@ -9,6 +9,7 @@ struct sonatina_profile {
 };
 
 gboolean sonatina_profiles_load();
+gboolean sonatina_profiles_save();
 
 /**
   @brief Create new connection profile.

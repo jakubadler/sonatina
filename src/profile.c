@@ -6,26 +6,26 @@
 #include "core.h"
 #include "gui.h"
 
-gchar *profilesfile;
-GKeyFile *profiles;
 
 gboolean sonatina_profiles_load()
 {
+	gchar *profilesfile;
+	GKeyFile *profiles;
 	gchar **profnames;
 	size_t i;
 	struct sonatina_profile *profile = NULL;
+	gboolean success;
 	
-	if (!profilesfile) {
-		profilesfile = g_build_filename(g_get_user_config_dir(), PACKAGE, "profiles.ini", NULL);
-	}
-
-	if (!profiles) {
-		profiles = g_key_file_new();
-	}
-
-	g_key_file_load_from_file(profiles, profilesfile,
+	profilesfile = g_build_filename(g_get_user_config_dir(), PACKAGE, "profiles.ini", NULL);
+	profiles = g_key_file_new();
+	success = g_key_file_load_from_file(profiles, profilesfile,
 			G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS,
 			NULL);
+	g_free(profilesfile);
+
+	if (!success) {
+		return FALSE;
+	}
 
 	profnames = g_key_file_get_groups(profiles, NULL);
 	sonatina.profiles = NULL;
@@ -44,15 +44,41 @@ gboolean sonatina_profiles_load()
 		}
 	}
 
+	g_key_file_free(profiles);
 	g_strfreev(profnames);
 
 	return TRUE;
 
 }
 
-void sonatina_profiles_save()
+gboolean sonatina_profiles_save()
 {
-	g_key_file_save_to_file(profiles, profilesfile, NULL);
+	gchar *profilesfile;
+	GKeyFile *profiles;
+	GList *node;
+	struct sonatina_profile *profile;
+	gboolean success;
+	
+	profiles = g_key_file_new();
+
+	for (node = sonatina.profiles; node; node = node -> next) {
+		profile = (struct sonatina_profile *) node->data;
+		g_key_file_set_string(profiles, profile->name, "host", profile->host);
+		g_key_file_set_integer(profiles, profile->name, "port", profile->port);
+
+		if (profile->password) {
+			g_key_file_set_string(profiles, profile->password, "password", profile->password);
+		}
+	}
+
+	profilesfile = g_build_filename(g_get_user_config_dir(), PACKAGE, "profiles.ini", NULL);
+
+	success = g_key_file_save_to_file(profiles, profilesfile, NULL);
+
+	g_free(profilesfile);
+	g_key_file_free(profiles);
+
+	return success;
 }
 
 void sonatina_add_profile(const char *name, const char *host, int port, const char *password)
@@ -76,13 +102,6 @@ void sonatina_add_profile(const char *name, const char *host, int port, const ch
 
 	sonatina.profiles = g_list_append(sonatina.profiles, profile);
 	chooser_add_profile(profile->name);
-
-	g_key_file_set_string(profiles, name, "host", host);
-	g_key_file_set_integer(profiles, name, "port", port);
-
-	if (password) {
-		g_key_file_set_string(profiles, name, "password", password);
-	}
 }
 
 gboolean sonatina_modify_profile(const char *name, const struct sonatina_profile *new)
@@ -138,8 +157,6 @@ gboolean sonatina_remove_profile(const char *name)
 
 	sonatina.profiles = g_list_remove_link(sonatina.profiles, node);
 	g_list_free_full(node, (GDestroyNotify) sonatina_profile_free);
-
-	g_key_file_remove_group(profiles, name, NULL);
 
 	chooser_remove_profile(name);
 
