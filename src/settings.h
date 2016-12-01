@@ -30,13 +30,6 @@ struct settings_entry {
 
 };
 
-struct sonatina_profile {
-	gchar *name;
-	gchar *host;
-	gint port;
-	gchar *password;
-};
-
 /**
   @brief Load default settings.
   @param rc Key file
@@ -53,27 +46,6 @@ gboolean sonatina_settings_load();
   @brief Save runtime settings to files.
   */
 void sonatina_settings_save();
-
-/**
-  @brief Create new connection profile.
-  @param name Name of the new profile.
-  @param host Hostname.
-  @param port TCP port.
-  @param password Optional password.
-  */
-void sonatina_add_profile(const char *name, const char *host, int port, const char *password);
-
-gboolean sonatina_modify_profile(const char *name, const struct sonatina_profile *new);
-gboolean sonatina_remove_profile(const char *name);
-
-GList *sonatina_lookup_profile(const char *name);
-
-/**
-  @brief Get connection profile by name.
-  @param name Name of the profile.
-  @returns Profile with given name or NULL if not found.
-  */
-const struct sonatina_profile *sonatina_get_profile(const char *name);
 
 /**
   @brief Get value of a settings entry. An entry is specified by its name and a
@@ -104,10 +76,5 @@ gboolean sonatina_settings_set(const char *section, const char *name, union sett
   @returns Settings entry found or NULL.
   */
 const struct settings_entry *settings_lookup(const char *section, const char *name, enum settings_type type);
-
-/**
-  @brief Free profile structure and its members.
-  */
-void sonatina_profile_free(struct sonatina_profile *profile);
 
 #endif

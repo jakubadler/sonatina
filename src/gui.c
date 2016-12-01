@@ -6,6 +6,7 @@
 #include "core.h"
 #include "util.h"
 #include "settings.h"
+#include "profile.h"
 #include "gettext.h"
 
 #define UIFILE DATADIR "/" PACKAGE "/" PACKAGE ".ui"

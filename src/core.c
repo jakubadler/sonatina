@@ -8,6 +8,7 @@
 #include "util.h"
 #include "songattr.h"
 #include "settings.h"
+#include "profile.h"
 
 #include "playlist.h"
 #include "library.h"
@@ -25,6 +26,8 @@ void sonatina_init()
 	sonatina.mpdsource = NULL;
 	sonatina_settings_load(&sonatina);
 	sonatina_settings_default(sonatina.rc);
+
+	sonatina_profiles_load();
 
 	sonatina.elapsed = 0;
 	sonatina.total = 0;
@@ -50,6 +53,7 @@ void sonatina_destroy()
 	MSG_DEBUG("sonatina_destroy()");
 
 	sonatina_settings_save();
+	sonatina_profiles_save();
 
 	g_key_file_free(sonatina.rc);
 	g_list_free_full(sonatina.profiles, (GDestroyNotify) sonatina_profile_free);
