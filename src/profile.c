@@ -121,20 +121,24 @@ gboolean sonatina_modify_profile(const char *name, const struct sonatina_profile
 	profile = (struct sonatina_profile *) node->data;
 
 	if (new->name) {
+		MSG_DEBUG("chnging profile name form '%s' to '%s'", profile->name, new->name);
 		g_free(profile->name);
 		profile->name = g_strdup(new->name);
 	}
 
 	if (new->host) {
+		MSG_DEBUG("changing host in profile '%s' to '%s'", profile->name, new->host);
 		g_free(profile->host);
 		profile->host = g_strdup(new->host);
 	}
 
 	if (new->port >= 0) {
+		MSG_DEBUG("changing port in profile '%s' to '%d'", profile->name, new->port);
 		profile->port = new->port;
 	}
 
 	if (new->password) {
+		MSG_DEBUG("changing password in profile '%s' to '%s'", profile->name, new->password);
 		if (profile->password) {
 			g_free(profile->password);
 		}

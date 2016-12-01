@@ -290,13 +290,13 @@ void connect_signals()
 
 	/* settings */
 	w = gtk_builder_get_object(settings_ui, "profile_name_entry");
-	g_signal_connect(w, "activate", G_CALLBACK(profile_entry_cb), NULL);
+	g_signal_connect(w, "changed", G_CALLBACK(profile_entry_cb), NULL);
 	w = gtk_builder_get_object(settings_ui, "host_entry");
-	g_signal_connect(w, "activate", G_CALLBACK(profile_entry_cb), NULL);
+	g_signal_connect(w, "changed", G_CALLBACK(profile_entry_cb), NULL);
 	w = gtk_builder_get_object(settings_ui, "port_entry");
-	g_signal_connect(w, "activate", G_CALLBACK(profile_entry_cb), NULL);
+	g_signal_connect(w, "changed", G_CALLBACK(profile_entry_cb), NULL);
 	w = gtk_builder_get_object(settings_ui, "password_entry");
-	g_signal_connect(w, "activate", G_CALLBACK(profile_entry_cb), NULL);
+	g_signal_connect(w, "changed", G_CALLBACK(profile_entry_cb), NULL);
 
 	w = gtk_builder_get_object(settings_ui, "profile_add_button");
 	g_signal_connect(w, "clicked", G_CALLBACK(add_profile_cb), NULL);
@@ -437,7 +437,7 @@ gboolean append_settings_text(GtkGrid *grid, const char *section, const char *na
 	g_object_set(G_OBJECT(label), "margin", WIDGET_MARGIN, NULL);
 	gtk_widget_set_halign(label, GTK_ALIGN_START);
 
-	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(settings_entry_cb), (gpointer) e);
+	g_signal_connect(G_OBJECT(entry), "changed", G_CALLBACK(settings_entry_cb), (gpointer) e);
 
 	gtk_grid_attach_next_to(grid, label, NULL, GTK_POS_BOTTOM, 1, 1);
 	gtk_grid_attach_next_to(grid, entry, label, GTK_POS_RIGHT, 1, 1);
