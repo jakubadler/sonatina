@@ -455,6 +455,7 @@ void prepare_settings_dialog()
 	GObject *model;
 
 	dialog = gtk_builder_get_object(settings_ui, "settings_dialog");
+	g_signal_connect(dialog, "delete-event", G_CALLBACK(gtk_widget_hide_on_delete), NULL);
 	g_signal_connect_swapped(dialog, "response", G_CALLBACK(gtk_widget_hide), dialog);
 
 	/* set dialog's parent */
