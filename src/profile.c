@@ -40,10 +40,11 @@ gboolean sonatina_profiles_load()
 		profile->password = g_key_file_get_string(keyfile, profnames[i], "password", NULL);
 		if (profile->host) {
 			profiles = g_list_append(profiles, profile);
-			chooser_add_profile(profile->name);
 			profile = NULL;
 		}
 	}
+
+	chooser_update();
 
 	g_key_file_free(keyfile);
 	g_strfreev(profnames);
@@ -103,10 +104,11 @@ void sonatina_add_profile(const char *name, const char *host, int port, const ch
 	}
 
 	profiles = g_list_append(profiles, profile);
-	chooser_add_profile(profile->name);
+
+	chooser_update();
 }
 
-gboolean sonatina_modify_profile(const char *name, const struct sonatina_profile *new)
+gboolean sonatina_modify_profile(const char *name, const char *newname, const char *host, int port, const char *password)
 {
 	GList *node;
 	struct sonatina_profile *profile;
@@ -120,30 +122,37 @@ gboolean sonatina_modify_profile(const char *name, const struct sonatina_profile
 
 	profile = (struct sonatina_profile *) node->data;
 
-	if (new->name) {
-		MSG_DEBUG("chnging profile name form '%s' to '%s'", profile->name, new->name);
-		g_free(profile->name);
-		profile->name = g_strdup(new->name);
+	if (newname && g_strcmp0(name, newname)) {
+		if (sonatina_lookup_profile(newname)) {
+			MSG_WARNING("Can't rename profile '%s' to '%s': such profile already exist", profile->name, newname);
+			return FALSE;
+		} else {
+			MSG_DEBUG("chnging profile name form '%s' to '%s'", profile->name, newname);
+			g_free(profile->name);
+			profile->name = g_strdup(newname);
+		}
 	}
 
-	if (new->host) {
-		MSG_DEBUG("changing host in profile '%s' to '%s'", profile->name, new->host);
+	if (host) {
+		MSG_DEBUG("changing host in profile '%s' to '%s'", profile->name, host);
 		g_free(profile->host);
-		profile->host = g_strdup(new->host);
+		profile->host = g_strdup(host);
 	}
 
-	if (new->port >= 0) {
-		MSG_DEBUG("changing port in profile '%s' to '%d'", profile->name, new->port);
-		profile->port = new->port;
+	if (port >= 0) {
+		MSG_DEBUG("changing port in profile '%s' to '%d'", profile->name, port);
+		profile->port = port;
 	}
 
-	if (new->password) {
-		MSG_DEBUG("changing password in profile '%s' to '%s'", profile->name, new->password);
+	if (password) {
+		MSG_DEBUG("changing password in profile '%s' to '%s'", profile->name, password);
 		if (profile->password) {
 			g_free(profile->password);
 		}
-		profile->password = g_strdup(new->password);
+		profile->password = g_strdup(password);
 	}
+
+	chooser_update();
 
 	/* TODO: reconnect if this is current profile */
 
@@ -164,7 +173,7 @@ gboolean sonatina_remove_profile(const char *name)
 	profiles = g_list_remove_link(profiles, node);
 	g_list_free_full(node, (GDestroyNotify) sonatina_profile_free);
 
-	chooser_remove_profile(name);
+	chooser_update();
 
 	/* TODO: disconnect if this is current profile */
 

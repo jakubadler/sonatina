@@ -22,7 +22,7 @@ gboolean sonatina_profiles_save();
   */
 void sonatina_add_profile(const char *name, const char *host, int port, const char *password);
 
-gboolean sonatina_modify_profile(const char *name, const struct sonatina_profile *new);
+gboolean sonatina_modify_profile(const char *name, const char *newname, const char *host, int port, const char *password);
 gboolean sonatina_remove_profile(const char *name);
 
 GList *sonatina_lookup_profile(const char *name);

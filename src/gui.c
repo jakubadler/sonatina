@@ -46,9 +46,9 @@ void app_startup_cb(GtkApplication *app, gpointer user_data)
 	g_signal_connect(win, "delete-event", G_CALLBACK(gtk_widget_hide_on_delete), NULL);
 	gtk_application_add_window(app, GTK_WINDOW(win));
 
+	connect_signals();
 	prepare_settings_dialog();
 
-	connect_signals();
 
 	/* keep application running after main window is closed */
 	g_application_hold(G_APPLICATION(app));
@@ -477,7 +477,7 @@ void prepare_settings_dialog()
 	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(chooser), renderer, TRUE);
 	gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(chooser), renderer, "text", 0, NULL);
 	g_signal_connect(chooser, "changed", G_CALLBACK(chooser_changed_cb), NULL);
-	gtk_combo_box_set_active(GTK_COMBO_BOX(chooser), 0);
+	chooser_update();
 }
 
 void chooser_changed_cb(GtkComboBox *combo, gpointer data)
@@ -506,35 +506,36 @@ void chooser_changed_cb(GtkComboBox *combo, gpointer data)
 	}
 }
 
-void chooser_add_profile(const char *name)
-{
-	GObject *model;
-
-	model = gtk_builder_get_object(settings_ui, "profile_chooser_model");
-	gtk_list_store_insert_with_values(GTK_LIST_STORE(model), NULL, -1, 0, name, -1);
-}
-
-void chooser_remove_profile(const char *name)
+void chooser_update()
 {
 	GObject *chooser;
-	GObject *model;
-	GtkTreeIter iter;
+	GtkTreeModel *model;
+	gint selected;
+	gint n_items = 0;
+	GList *profile;
+	const char *name;
 
-	model = gtk_builder_get_object(settings_ui, "profile_chooser_model");
 	chooser = gtk_builder_get_object(settings_ui, "profile_chooser");
+	model = gtk_combo_box_get_model(GTK_COMBO_BOX(chooser));
+	selected = gtk_combo_box_get_active(GTK_COMBO_BOX(chooser));
 
-	if (!gtk_combo_box_get_active_iter(GTK_COMBO_BOX(chooser), &iter)) {
-		return;
+	gtk_list_store_clear(GTK_LIST_STORE(model));
+
+	for (profile = profiles; profile; profile = profile->next) {
+		name = ((struct sonatina_profile *) profile->data)->name;
+		gtk_list_store_insert_with_values(GTK_LIST_STORE(model), NULL, -1, 0, name, -1);
+		n_items++;
 	}
 
-	gtk_list_store_remove(GTK_LIST_STORE(model), &iter);
-
-	if (!gtk_list_store_iter_is_valid(GTK_LIST_STORE(model), &iter)) {
-		/* TODO: select previous item insead of first */
-		gtk_tree_model_get_iter_first(GTK_TREE_MODEL(model), &iter);
+	if (selected >= n_items) {
+		selected = n_items - 1;
 	}
 
-	gtk_combo_box_set_active_iter(GTK_COMBO_BOX(chooser), &iter);
+	if (selected < 0) {
+		selected = 0;
+	}
+
+	gtk_combo_box_set_active(GTK_COMBO_BOX(chooser), selected);
 }
 
 void profile_entry_cb(GtkEntry *w, gpointer data)
@@ -542,11 +543,14 @@ void profile_entry_cb(GtkEntry *w, gpointer data)
 	GObject *chooser;
 	GtkTreeIter iter;
 	const gchar *id;
-	const gchar *name;
-	struct sonatina_profile profile;
+	const gchar *profile;
+	const gchar *name = NULL;
+	const gchar *host = NULL;
+	const gchar *password = NULL;
+	gint port = -1;
 
 	chooser = gtk_builder_get_object(settings_ui, "profile_chooser");
-	name = gtk_combo_box_get_active_id(GTK_COMBO_BOX(chooser));
+	profile = gtk_combo_box_get_active_id(GTK_COMBO_BOX(chooser));
 
 	if (!gtk_combo_box_get_active_iter(GTK_COMBO_BOX(chooser), &iter)) {
 		return;
@@ -555,22 +559,17 @@ void profile_entry_cb(GtkEntry *w, gpointer data)
 	id = gtk_buildable_get_name(GTK_BUILDABLE(w));
 	MSG_DEBUG("entry '%s' activated", id);
 
-	profile.name = NULL;
-	profile.host = NULL;
-	profile.port = -1;
-	profile.password = NULL;
-
 	if (!g_strcmp0(id, "profile_name_entry")) {
-		profile.name = gtk_entry_get_text(GTK_ENTRY(w));
+		name = gtk_entry_get_text(GTK_ENTRY(w));
 	} else if (!g_strcmp0(id, "host_entry")) {
-		profile.host = gtk_entry_get_text(GTK_ENTRY(w));
+		host = gtk_entry_get_text(GTK_ENTRY(w));
 	} else if (!g_strcmp0(id, "port_entry")) {
-		profile.port = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(w));
+		port = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(w));
 	} else if (!g_strcmp0(id, "password_entry")) {
-		profile.password = gtk_entry_get_text(GTK_ENTRY(w));
+		password = gtk_entry_get_text(GTK_ENTRY(w));
 	}
 
-	sonatina_modify_profile(name, &profile);
+	sonatina_modify_profile(profile, name, host, port, password);
 }
 
 #define DEFAULT_NEW_PROFILE _("New profile")
@@ -601,7 +600,6 @@ gchar *create_profile_name()
 void add_profile_cb(GtkButton *button, gpointer data)
 {
 	GObject *chooser;
-	GObject *entry;
 	gchar *name;
 
 	chooser = gtk_builder_get_object(settings_ui, "profile_chooser");
@@ -620,8 +618,7 @@ void add_profile_cb(GtkButton *button, gpointer data)
 void remove_profile_cb(GtkButton *button, gpointer data)
 {
 	GObject *chooser;
-	GObject *entry;
-	gchar *name;
+	const gchar *name;
 
 	chooser = gtk_builder_get_object(settings_ui, "profile_chooser");
 	name = gtk_combo_box_get_active_id(GTK_COMBO_BOX(chooser));

@@ -85,8 +85,7 @@ gboolean append_settings_toggle(GtkGrid *grid, const char *section, const char *
 gboolean append_settings_text(GtkGrid *grid, const char *section, const char *name);
 
 void prepare_settings_dialog();
-void chooser_add_profile(const char *name);
-void chooser_remove_profile(const char *name);
+void chooser_update();
 void chooser_changed_cb(GtkComboBox *combo, gpointer data);
 void profile_entry_cb(GtkEntry *w, gpointer data);
 void add_profile_cb(GtkButton *button, gpointer data);
