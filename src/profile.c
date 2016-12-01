@@ -68,7 +68,7 @@ gboolean sonatina_profiles_save()
 		g_key_file_set_integer(keyfile, profile->name, "port", profile->port);
 
 		if (profile->password) {
-			g_key_file_set_string(keyfile, profile->password, "password", profile->password);
+			g_key_file_set_string(keyfile, profile->name, "password", profile->password);
 		}
 	}
 
