@@ -529,7 +529,12 @@ void chooser_remove_profile(const char *name)
 
 	gtk_list_store_remove(GTK_LIST_STORE(model), &iter);
 
-	/* TODO: select something */
+	if (!gtk_list_store_iter_is_valid(GTK_LIST_STORE(model), &iter)) {
+		/* TODO: select previous item insead of first */
+		gtk_tree_model_get_iter_first(GTK_TREE_MODEL(model), &iter);
+	}
+
+	gtk_combo_box_set_active_iter(GTK_COMBO_BOX(chooser), &iter);
 }
 
 void profile_entry_cb(GtkEntry *w, gpointer data)
