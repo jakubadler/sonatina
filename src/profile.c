@@ -6,19 +6,20 @@
 #include "core.h"
 #include "gui.h"
 
+GList *profiles;
 
 gboolean sonatina_profiles_load()
 {
 	gchar *profilesfile;
-	GKeyFile *profiles;
+	GKeyFile *keyfile;
 	gchar **profnames;
 	size_t i;
 	struct sonatina_profile *profile = NULL;
 	gboolean success;
 	
 	profilesfile = g_build_filename(g_get_user_config_dir(), PACKAGE, "profiles.ini", NULL);
-	profiles = g_key_file_new();
-	success = g_key_file_load_from_file(profiles, profilesfile,
+	keyfile = g_key_file_new();
+	success = g_key_file_load_from_file(keyfile, profilesfile,
 			G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS,
 			NULL);
 	g_free(profilesfile);
@@ -27,24 +28,24 @@ gboolean sonatina_profiles_load()
 		return FALSE;
 	}
 
-	profnames = g_key_file_get_groups(profiles, NULL);
-	sonatina.profiles = NULL;
+	profnames = g_key_file_get_groups(keyfile, NULL);
+	profiles = NULL;
 	for (i = 0; profnames[i]; i++) {
 		if (!profile) {
 			profile = g_malloc(sizeof(struct sonatina_profile));
 		}
 		profile->name = g_strdup(profnames[i]);
-		profile->host = g_key_file_get_string(profiles, profnames[i], "host", NULL);
-		profile->port = g_key_file_get_integer(profiles, profnames[i], "port", NULL);
-		profile->password = g_key_file_get_string(profiles, profnames[i], "password", NULL);
+		profile->host = g_key_file_get_string(keyfile, profnames[i], "host", NULL);
+		profile->port = g_key_file_get_integer(keyfile, profnames[i], "port", NULL);
+		profile->password = g_key_file_get_string(keyfile, profnames[i], "password", NULL);
 		if (profile->host) {
-			sonatina.profiles = g_list_append(sonatina.profiles, profile);
+			profiles = g_list_append(profiles, profile);
 			chooser_add_profile(profile->name);
 			profile = NULL;
 		}
 	}
 
-	g_key_file_free(profiles);
+	g_key_file_free(keyfile);
 	g_strfreev(profnames);
 
 	return TRUE;
@@ -54,29 +55,30 @@ gboolean sonatina_profiles_load()
 gboolean sonatina_profiles_save()
 {
 	gchar *profilesfile;
-	GKeyFile *profiles;
+	GKeyFile *keyfile;
 	GList *node;
 	struct sonatina_profile *profile;
 	gboolean success;
 	
-	profiles = g_key_file_new();
+	keyfile = g_key_file_new();
 
-	for (node = sonatina.profiles; node; node = node -> next) {
+	for (node = profiles; node; node = node -> next) {
 		profile = (struct sonatina_profile *) node->data;
-		g_key_file_set_string(profiles, profile->name, "host", profile->host);
-		g_key_file_set_integer(profiles, profile->name, "port", profile->port);
+		g_key_file_set_string(keyfile, profile->name, "host", profile->host);
+		g_key_file_set_integer(keyfile, profile->name, "port", profile->port);
 
 		if (profile->password) {
-			g_key_file_set_string(profiles, profile->password, "password", profile->password);
+			g_key_file_set_string(keyfile, profile->password, "password", profile->password);
 		}
 	}
 
 	profilesfile = g_build_filename(g_get_user_config_dir(), PACKAGE, "profiles.ini", NULL);
 
-	success = g_key_file_save_to_file(profiles, profilesfile, NULL);
+	success = g_key_file_save_to_file(keyfile, profilesfile, NULL);
 
 	g_free(profilesfile);
-	g_key_file_free(profiles);
+	g_key_file_free(keyfile);
+	g_list_free_full(profiles, (GDestroyNotify) sonatina_profile_free);
 
 	return success;
 }
@@ -100,7 +102,7 @@ void sonatina_add_profile(const char *name, const char *host, int port, const ch
 		profile->password = NULL;
 	}
 
-	sonatina.profiles = g_list_append(sonatina.profiles, profile);
+	profiles = g_list_append(profiles, profile);
 	chooser_add_profile(profile->name);
 }
 
@@ -155,7 +157,7 @@ gboolean sonatina_remove_profile(const char *name)
 		return FALSE;
 	}
 
-	sonatina.profiles = g_list_remove_link(sonatina.profiles, node);
+	profiles = g_list_remove_link(profiles, node);
 	g_list_free_full(node, (GDestroyNotify) sonatina_profile_free);
 
 	chooser_remove_profile(name);
@@ -169,7 +171,7 @@ GList *sonatina_lookup_profile(const char *name)
 {
 	GList *cur;
 
-	for (cur = sonatina.profiles; cur; cur = cur->next) {
+	for (cur = profiles; cur; cur = cur->next) {
 		if (!g_strcmp0(((struct sonatina_profile *) cur->data)->name, name)) {
 			return cur;
 		}

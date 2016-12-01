@@ -56,7 +56,6 @@ void sonatina_destroy()
 	sonatina_profiles_save();
 
 	g_key_file_free(sonatina.rc);
-	g_list_free_full(sonatina.profiles, (GDestroyNotify) sonatina_profile_free);
 
 	w = gtk_builder_get_object(sonatina.gui, "window");
 	gtk_widget_destroy(GTK_WIDGET(w));

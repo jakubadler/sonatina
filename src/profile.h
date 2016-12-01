@@ -8,6 +8,8 @@ struct sonatina_profile {
 	gchar *password;
 };
 
+extern GList *profiles; /** List of GKeyFile objects representing available profiles */
+
 gboolean sonatina_profiles_load();
 gboolean sonatina_profiles_save();
 

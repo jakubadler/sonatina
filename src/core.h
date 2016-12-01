@@ -16,7 +16,6 @@ struct sonatina_instance {
 
 	GtkBuilder *gui;
 	GKeyFile *rc;
-	GList *profiles; /** List of GKeyFile objects representing available profiles */
 	GList *tabs;
 
 	int cur;

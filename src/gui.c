@@ -17,6 +17,7 @@
 static GActionEntry app_entries[] = {
 	{ "dbupdate", db_update_action, NULL, NULL, NULL },
 	{ "connect", connect_action, "s", "\"\"", connect_action },
+
 	{ "disconnect", disconnect_action, NULL, NULL, NULL },
 	{ "settings", settings_action, NULL, NULL, NULL },
 	{ "quit", quit_action, NULL, NULL, NULL }
@@ -181,7 +182,7 @@ GtkWidget *sonatina_menu(GMenuModel *specific)
 
 	connmenu = gtk_builder_get_object(sonatina.gui, "connmenu");
 	g_menu_remove_all(G_MENU(connmenu));
-	for (profile = sonatina.profiles; profile; profile = profile->next) {
+	for (profile = profiles; profile; profile = profile->next) {
 		name = ((const struct sonatina_profile *) profile->data)->name;
 		action = g_strdup_printf("%s::%s", "app.connect", name);
 		g_menu_append(G_MENU(connmenu), name, action);
