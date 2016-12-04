@@ -25,7 +25,6 @@ void sonatina_init()
 
 	sonatina.mpdsource = NULL;
 	sonatina_settings_load(&sonatina);
-	sonatina_settings_default(sonatina.rc);
 
 	sonatina_profiles_load();
 
@@ -55,8 +54,6 @@ void sonatina_destroy()
 	sonatina_settings_save();
 	sonatina_profiles_save();
 
-	g_key_file_free(sonatina.rc);
-
 	w = gtk_builder_get_object(sonatina.gui, "window");
 	gtk_widget_destroy(GTK_WIDGET(w));
 
@@ -85,8 +82,8 @@ gboolean sonatina_connect(const char *host, int port)
 		tab->set_mpdsource(tab, sonatina.mpdsource);
 	}
 
-	mpd_source_register(sonatina.mpdsource, MPD_CMD_STATUS, sonatina_update_status, tab);
-	mpd_source_register(sonatina.mpdsource, MPD_CMD_CURRENTSONG, sonatina_update_song, tab);
+	mpd_source_register(sonatina.mpdsource, MPD_CMD_STATUS, sonatina_update_status, NULL);
+	mpd_source_register(sonatina.mpdsource, MPD_CMD_CURRENTSONG, sonatina_update_song, NULL);
 
 	mpd_send(sonatina.mpdsource, MPD_CMD_STATUS, NULL);
 	mpd_send(sonatina.mpdsource, MPD_CMD_PLINFO, NULL);
@@ -123,6 +120,7 @@ void sonatina_disconnect()
 gboolean sonatina_change_profile(const char *new)
 {
 	const struct sonatina_profile *profile;
+	union settings_value val;
 
 	profile = sonatina_get_profile(new);
 
@@ -137,7 +135,8 @@ gboolean sonatina_change_profile(const char *new)
 
 	MSG_INFO("changing profile to %s", profile->name);
 	if (sonatina_connect(profile->host, profile->port)) {
-		g_key_file_set_string(sonatina.rc, "main", "active_profile", profile->name);
+		val.string = profile->name;
+		sonatina_settings_set("main", "active_profile", val);
 	}
 
 	return TRUE;
@@ -151,7 +150,7 @@ void sonatina_update_song(GList *args, union mpd_cmd_answer *answer, void *data)
 	int pos;
 
 	if (song) {
-		format = g_key_file_get_string(sonatina.rc, "main", "title", NULL);
+		format = sonatina_settings_get_string("main", "title");
 		str = song_attr_format(format, song);
 		if (str) {
 			sonatina_set_labels(str, NULL);
@@ -159,7 +158,7 @@ void sonatina_update_song(GList *args, union mpd_cmd_answer *answer, void *data)
 		g_free(format);
 		g_free(str);
 
-		format = g_key_file_get_string(sonatina.rc, "main", "subtitle", NULL);
+		format = sonatina_settings_get_string("main", "subtitle");
 		str = song_attr_format(format, song);
 		if (str) {
 			sonatina_set_labels(NULL, str);

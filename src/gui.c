@@ -54,7 +54,7 @@ void app_startup_cb(GtkApplication *app, gpointer user_data)
 	g_application_hold(G_APPLICATION(app));
 
 	g_action_map_add_action_entries(G_ACTION_MAP(app), app_entries, G_N_ELEMENTS(app_entries), app);
-	profile = g_key_file_get_string(sonatina.rc, "main", "active_profile", NULL);
+	profile = sonatina_settings_get_string("main", "active_profile");
 	g_action_group_activate_action(G_ACTION_GROUP(app), "connect", g_variant_new("s", profile));
 	g_free(profile);
 }

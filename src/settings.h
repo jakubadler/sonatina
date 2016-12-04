@@ -27,6 +27,7 @@ struct settings_entry {
 	enum settings_type type;
 	const char *label;
 	const char *tooltip;
+	void (*changed_cb)(union settings_value, void *);
 
 };
 
@@ -37,7 +38,7 @@ struct settings_entry {
 void sonatina_settings_default(GKeyFile *rc);
 
 /**
-  @brief Load settings from file to sonatina.rc.
+  @brief Load settings from file.
   @returns TRUE on success, FALSE otherwise.
   */
 gboolean sonatina_settings_load();
@@ -53,9 +54,9 @@ void sonatina_settings_save();
   @param section Section name.
   @param type Entry name.
   @param value Address where to store value.
-  @returns TRUE on success, FALSE otherwise.
+  @returns Type of the retrieved value or SETTINGS_UNKNOW when no value was set.
   */
-gboolean sonatina_settings_get(const char *section, const char *name, union settings_value *value);
+enum settings_type sonatina_settings_get(const char *section, const char *name, union settings_value *value);
 
 /**
   @brief Set value of a settings entry.
@@ -76,5 +77,35 @@ gboolean sonatina_settings_set(const char *section, const char *name, union sett
   @returns Settings entry found or NULL.
   */
 const struct settings_entry *settings_lookup(const char *section, const char *name, enum settings_type type);
+
+/**
+  @brief Convenience wrapper over @a sonatina_settings_get() to retrive numeric
+  type settings entry value.
+  @param section Section name.
+  @param name Entry name.
+  @returns Value of the specified entry or 0 if the entry doesn't exist or is of
+  another type.
+  */
+gint sonatina_settings_get_num(const char *section, const char *name);
+
+/**
+  @brief Convenience wrapper over @a sonatina_settings_get() to retrive boolean
+  type settings entry value.
+  @param section Section name.
+  @param name Entry name.
+  @returns Value of the specified entry or FALSE if the entry doesn't exist or is of
+  another type.
+  */
+gboolean sonatina_settings_get_bool(const char *section, const char *name);
+
+/**
+  @brief Convenience wrapper over @a sonatina_settings_get() to retrive string
+  type settings entry value.
+  @param section Section name.
+  @param name Entry name.
+  @returns Value of the specified entry or NULL if the entry doesn't exist or is of
+  another type. If non-NULL is returned, it should be freed with g_free().
+  */
+gchar *sonatina_settings_get_string(const char *section, const char *name);
 
 #endif

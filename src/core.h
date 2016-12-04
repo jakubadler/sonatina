@@ -15,7 +15,6 @@ struct sonatina_instance {
 	GSource *mpdsource; /** NULL when not connected */
 
 	GtkBuilder *gui;
-	GKeyFile *rc;
 	GList *tabs;
 
 	int cur;
@@ -29,7 +28,7 @@ struct sonatina_instance {
   */
 struct sonatina_tab {
 	gchar *name; /** Internal name of the tab */
-	gchar *label; /** Human-readable name of the tab that will be displayed as the tab's label */
+	gchar *label; /** Translatable name of the tab that will be displayed as the tab's label */
 	GtkWidget *widget; /** Top-level widget of the tab */
 	gboolean (*init)(struct sonatina_tab *); /** Function to initialize tab;
 						   called when a tab is added to

@@ -7,20 +7,19 @@
 #include "settings.h"
 #include "core.h"
 #include "util.h"
-#include "gui.h"
 #include "gettext.h"
 
 gchar *rcdir;
 gchar *rcfile;
 
-GKeyFile *profiles;
+GKeyFile *rc;
 
 struct settings_entry settings[] = {
-	{ "main", "title", SETTINGS_STRING, __("Song line 1"), NULL },
-	{ "main", "subtitle", SETTINGS_STRING, __("Song line 2"), NULL },
-	{ "playlist", "format", SETTINGS_STRING, __("Playlist entry"), NULL },
-	{ "library", "format", SETTINGS_STRING, __("Library entry"), NULL },
-	{ NULL, NULL, SETTINGS_UNKNOWN, NULL, NULL }
+	{ "main", "title", SETTINGS_STRING, __("Song line 1"), NULL, NULL },
+	{ "main", "subtitle", SETTINGS_STRING, __("Song line 2"), NULL, NULL },
+	{ "playlist", "format", SETTINGS_STRING, __("Playlist entry"), NULL, NULL },
+	{ "library", "format", SETTINGS_STRING, __("Library entry"), NULL, NULL },
+	{ NULL, NULL, SETTINGS_UNKNOWN, NULL, NULL, NULL }
 };
 
 void sonatina_settings_default(GKeyFile *rc)
@@ -56,23 +55,26 @@ gboolean sonatina_settings_load()
 		}
 	}
 	
-	if (!sonatina.rc) {
-		sonatina.rc = g_key_file_new();
+	if (!rc) {
+		rc = g_key_file_new();
 	}
 
-	g_key_file_load_from_file(sonatina.rc, rcfile,
+	g_key_file_load_from_file(rc, rcfile,
 	                                 G_KEY_FILE_KEEP_COMMENTS |
 	                                 G_KEY_FILE_KEEP_TRANSLATIONS, NULL);
+
+	sonatina_settings_default(rc);
 
 	return TRUE;
 }
 
 void sonatina_settings_save()
 {
-	g_key_file_save_to_file(sonatina.rc, rcfile, NULL);
+	g_key_file_save_to_file(rc, rcfile, NULL);
+	g_key_file_free(rc);
 }
 
-gboolean sonatina_settings_get(const char *section, const char *name, union settings_value *value)
+enum settings_type sonatina_settings_get(const char *section, const char *name, union settings_value *value)
 {
 	const struct settings_entry *entry;
 	union settings_value val;
@@ -85,34 +87,34 @@ gboolean sonatina_settings_get(const char *section, const char *name, union sett
 
 	if (!entry) {
 		MSG_ERROR("Undefined settings entry %s/%s", section, name);
-		return FALSE;
+		return SETTINGS_UNKNOWN;
 	}
 
 	switch (entry->type) {
 	case SETTINGS_NUM:
-		val.num = g_key_file_get_integer(sonatina.rc, section, name, &err);
+		val.num = g_key_file_get_integer(rc, section, name, &err);
 		break;
 	case SETTINGS_BOOL:
-		val.boolean = g_key_file_get_boolean(sonatina.rc, section, name, &err);
+		val.boolean = g_key_file_get_boolean(rc, section, name, &err);
 		break;
 	case SETTINGS_STRING:
-		val.string = g_key_file_get_string(sonatina.rc, section, name, &err);
+		val.string = g_key_file_get_string(rc, section, name, &err);
 		break;
 	default:
 		MSG_ERROR("Invalid settings entry type: %d", entry->type);
-		return FALSE;
+		return SETTINGS_UNKNOWN;
 		break;
 	}
 
 	if (err) {
 		MSG_ERROR("Couldn't retrieve settings entry %s/%s: %s", entry->section, entry->name, err->message);
 		g_error_free(err);
-		return FALSE;
+		return SETTINGS_UNKNOWN;
 	}
 
 	*value = val;
 
-	return TRUE;
+	return entry->type;
 }
 
 gboolean sonatina_settings_set(const char *section, const char *name, union settings_value value)
@@ -132,16 +134,16 @@ gboolean sonatina_settings_set(const char *section, const char *name, union sett
 	switch (entry->type) {
 	case SETTINGS_NUM:
 		MSG_DEBUG("settings %s/%s = %d", section, name, value.num);
-		g_key_file_set_integer(sonatina.rc, section, name, value.num);
+		g_key_file_set_integer(rc, section, name, value.num);
 		break;
 	case SETTINGS_BOOL:
 		MSG_DEBUG("settings %s/%s = %d", section, name, value.boolean);
-		g_key_file_set_boolean(sonatina.rc, section, name, value.boolean);
+		g_key_file_set_boolean(rc, section, name, value.boolean);
 		break;
 	case SETTINGS_STRING:
 		g_assert(value.string != NULL);
 		MSG_DEBUG("settings %s/%s = %s", section, name, value.string);
-		g_key_file_set_string(sonatina.rc, section, name, value.string);
+		g_key_file_set_string(rc, section, name, value.string);
 		break;
 	default:
 		MSG_ERROR("Invalid settings entry type: %d", entry->type);
@@ -166,3 +168,54 @@ const struct settings_entry *settings_lookup(const char *section, const char *na
 
 	return NULL;
 }
+
+gint sonatina_settings_get_num(const char *section, const char *name)
+{
+	enum settings_type type;
+	union settings_value val;
+
+	type = sonatina_settings_get(section, name, &val);
+
+	if (type == SETTINGS_NUM) {
+		return val.num;
+	}
+
+	if (type == SETTINGS_STRING) {
+		g_free(val.string);
+	}
+
+	return 0;
+}
+
+gboolean sonatina_settings_get_bool(const char *section, const char *name)
+{
+	enum settings_type type;
+	union settings_value val;
+
+	type = sonatina_settings_get(section, name, &val);
+
+	if (type == SETTINGS_BOOL) {
+		return val.boolean;
+	}
+
+	if (type == SETTINGS_STRING) {
+		g_free(val.string);
+	}
+
+	return FALSE;
+}
+
+gchar *sonatina_settings_get_string(const char *section, const char *name)
+{
+	enum settings_type type;
+	union settings_value val;
+
+	type = sonatina_settings_get(section, name, &val);
+
+	if (type == SETTINGS_STRING) {
+		return val.string;
+	}
+
+	return NULL;
+}
+

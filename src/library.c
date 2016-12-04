@@ -9,6 +9,7 @@
 #include "songattr.h"
 #include "core.h"
 #include "gui.h"
+#include "settings.h"
 #include "gettext.h"
 
 const char *listing_icons[] = {
@@ -262,7 +263,7 @@ void library_model_append_entity(GtkListStore *model, const struct mpd_entity *e
 	case MPD_ENTITY_TYPE_SONG:
 		type = LIBRARY_SONG;
 		song = mpd_entity_get_song(entity);
-		format = g_key_file_get_string(sonatina.rc, "library", "format", NULL);
+		format = sonatina_settings_get_string("library", "format");
 		name = song_attr_format(format, song);
 		uri = mpd_song_get_uri(song);
 		MSG_DEBUG("library_model_append_entity(): format '%s', name '%s', uri: %s", format, name, uri);

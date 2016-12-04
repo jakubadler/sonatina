@@ -6,6 +6,7 @@
 #include "util.h"
 #include "client.h"
 #include "gui.h"
+#include "settings.h"
 
 static GActionEntry playlist_selected_actions[] = {
 	{ "remove", playlist_remove_action, NULL, NULL, NULL }
@@ -18,14 +19,9 @@ static GActionEntry playlist_actions[] = {
 gboolean pl_tab_init(struct sonatina_tab *tab)
 {
 	struct pl_tab *pltab = (struct pl_tab *) tab;
-	size_t i;
-	GType *types;
 	GObject *tw;
 	GObject *menu;
-	GtkCellRenderer *renderer;
-	GtkTreeViewColumn *col;
 	GtkTreeSelection *selection;
-	gchar *title;
 	gchar *format;
 
 	/* load ui */
@@ -35,49 +31,16 @@ gboolean pl_tab_init(struct sonatina_tab *tab)
 		return FALSE;
 	}
 
-	format = g_key_file_get_string(sonatina.rc, "playlist", "format", NULL);
-
-	pltab->n_columns = 1;
-	for (i = 0; format[i]; i++) {
-		if (format[i] == '|')
-			pltab->n_columns++;
-	}
-
-	pltab->columns = g_strsplit(format, "|", 0);
+	pltab->store = NULL;
+	format = sonatina_settings_get_string("playlist", "format");
+	pl_tab_set_format(pltab, format);
 	g_free(format);
-	types = g_malloc((PL_COUNT + pltab->n_columns) * sizeof(GType));
-
-	types[PL_ID] = G_TYPE_INT;
-	types[PL_POS] = G_TYPE_INT;
-	types[PL_WEIGHT] = G_TYPE_INT;
-	for (i = 0; pltab->columns[i]; i++) {
-		types[PL_COUNT + i] = G_TYPE_STRING;
-	}
-	pltab->store = gtk_list_store_newv(PL_COUNT + pltab->n_columns, types);
-	g_free(types);
 
 	/* update TreeView */
 	tw = gtk_builder_get_object(pltab->ui, "tw");
 	if (!tw) {
 		MSG_INFO("failed to load playlist tree view");
 		return FALSE;
-	}
-	gtk_tree_view_set_model(GTK_TREE_VIEW(tw), GTK_TREE_MODEL(pltab->store));
-
-	renderer = gtk_cell_renderer_text_new();
-	g_object_set(G_OBJECT(renderer), "weight-set", TRUE, NULL);
-
-	/* remove all columns */
-	for (i = 0; (col = gtk_tree_view_get_column(GTK_TREE_VIEW(tw), i)); i++) {
-		gtk_tree_view_remove_column(GTK_TREE_VIEW(tw), col);
-	}
-
-	/* add new columns */
-	for (i = 0; pltab->columns[i]; i++) {
-		title = song_attr_format(pltab->columns[i], NULL);
-		MSG_DEBUG("adding column with format '%s' to playlist tw", pltab->columns[i]);
-		col = gtk_tree_view_column_new_with_attributes(title, renderer, "weight", PL_WEIGHT, "text", PL_COUNT + i, NULL);
-		gtk_tree_view_append_column(GTK_TREE_VIEW(tw), col);
 	}
 
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tw));
@@ -95,6 +58,59 @@ gboolean pl_tab_init(struct sonatina_tab *tab)
 	connect_popup(GTK_WIDGET(tab->widget), G_MENU_MODEL(menu));
 
 	return TRUE;
+}
+
+void pl_tab_set_format(struct pl_tab *tab, const char *format)
+{
+	size_t i;
+	GType *types;
+	GObject *tw;
+	GtkCellRenderer *renderer;
+	GtkTreeViewColumn *col;
+	gchar *title;
+
+	tab->n_columns = 1;
+	for (i = 0; format[i]; i++) {
+		if (format[i] == '|')
+			tab->n_columns++;
+	}
+
+	tab->columns = g_strsplit(format, "|", 0);
+
+	types = g_malloc((PL_COUNT + tab->n_columns) * sizeof(GType));
+
+	types[PL_ID] = G_TYPE_INT;
+	types[PL_POS] = G_TYPE_INT;
+	types[PL_WEIGHT] = G_TYPE_INT;
+	for (i = 0; tab->columns[i]; i++) {
+		types[PL_COUNT + i] = G_TYPE_STRING;
+	}
+
+	if (tab->store) {
+		g_object_unref(G_OBJECT(tab->store));
+	}
+
+	tab->store = gtk_list_store_newv(PL_COUNT + tab->n_columns, types);
+	g_free(types);
+
+	tw = gtk_builder_get_object(tab->ui, "tw");
+	gtk_tree_view_set_model(GTK_TREE_VIEW(tw), GTK_TREE_MODEL(tab->store));
+
+	renderer = gtk_cell_renderer_text_new();
+	g_object_set(G_OBJECT(renderer), "weight-set", TRUE, NULL);
+
+	/* remove all columns */
+	for (i = 0; (col = gtk_tree_view_get_column(GTK_TREE_VIEW(tw), i)); i++) {
+		gtk_tree_view_remove_column(GTK_TREE_VIEW(tw), col);
+	}
+
+	/* add new columns */
+	for (i = 0; tab->columns[i]; i++) {
+		title = song_attr_format(tab->columns[i], NULL);
+		MSG_DEBUG("adding column with format '%s' to playlist tw", tab->columns[i]);
+		col = gtk_tree_view_column_new_with_attributes(title, renderer, "weight", PL_WEIGHT, "text", PL_COUNT + i, NULL);
+		gtk_tree_view_append_column(GTK_TREE_VIEW(tw), col);
+	}
 }
 
 void pl_tab_set_source(struct sonatina_tab *tab, GSource *source)

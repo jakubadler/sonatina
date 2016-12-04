@@ -5,6 +5,7 @@
 
 #include "core.h"
 #include "client.h"
+#include "settings.h"
 
 enum pl_columns {
 	PL_ID,
@@ -33,6 +34,8 @@ struct pl_tab {
   @returns TRUE on success, FALSE otherwise.
   */
 gboolean pl_tab_init(struct sonatina_tab *tab);
+
+void pl_tab_set_format(struct pl_tab *tab, const char *format);
 
 /**
   @brief Set MPD source of a playlist tab.
