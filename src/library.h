@@ -28,8 +28,8 @@ struct library_path {
 				     NULL */
 	
 	char *name; /** Name of this node that will be presented to the user */
-	int selected; /** Index of selected item in this directory or negative
-			value if nothing is selected. */
+	gchar *selected;
+	GtkTreePath *pos;
 };
 
 /**
@@ -90,6 +90,18 @@ void library_tw_set_columns(GtkTreeView *tw);
   @param name Name of the item to be opened.
   */
 void library_tab_open_dir(struct library_tab *tab, const char *name);
+
+/**
+  @brief Save scrollbar position in current view.
+  @param tab Library tab.
+  */
+void library_tab_save_scroll(struct library_tab *tab);
+
+/**
+  @brief Restore saved scrollbar position for current view if it exists.
+  @param tab Library tab.
+  */
+void library_tab_set_scroll(struct library_tab *tab);
 
 /**
   @brief Open a directory that is part of the current path.
@@ -194,16 +206,18 @@ void library_clicked_cb(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn *c
   @brief Append an item specified by libmpd's entity to library list.
   @param model Gtk list store used as model for tree view.
   @param entity MPD entity.
+  @returns GtkTreeIter pointing to the added item.
   */
-void library_model_append_entity(GtkListStore *model, const struct mpd_entity *entity);
+GtkTreeIter library_model_append_entity(GtkListStore *model, const struct mpd_entity *entity);
 
 /**
   @brief Append an item specified by type and name to library list.
   @param model GTK list store used as model for tree view.
   @param type Type of the item.
   @param name Name of the item.
+  @returns GtkTreeIter pointing to the added item.
   */
-void library_model_append(GtkListStore *model, enum listing_type type, const char *name, const char *uri);
+GtkTreeIter library_model_append(GtkListStore *model, enum listing_type type, const char *name, const char *uri);
 
 /**
   @brief Get path string for given path. This string doesn't begin with slash to
@@ -248,5 +262,7 @@ void library_replace_action(GSimpleAction *action, GVariant *param, gpointer dat
 void library_update_action(GSimpleAction *action, GVariant *param, gpointer data);
 
 void library_set_busy(struct library_tab *tab, gboolean busy);
+
+void library_select(struct library_tab *tab, GtkTreeIter *iter);
 
 #endif

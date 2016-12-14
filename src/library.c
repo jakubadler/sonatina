@@ -137,6 +137,7 @@ void library_list_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 	struct library_tab *tab = (struct library_tab *) data;
 	GList *cur;
 	enum listing_type type;
+	GtkTreeIter iter;
 
 	if (!args) {
 		MSG_WARNING("irrelevant list answer received");
@@ -157,9 +158,13 @@ void library_list_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 	gtk_list_store_clear(tab->store);
 
 	for (cur = answer->list; cur; cur = cur->next) {
-		library_model_append(tab->store, type, cur->data, NULL);
+		iter = library_model_append(tab->store, type, cur->data, NULL);
+		if (!g_strcmp0(tab->path->selected, cur->data)) {
+			library_select(tab, &iter);
+		}
 	}
 
+	library_tab_set_scroll(tab);
 	library_set_busy(tab, FALSE);
 }
 
@@ -169,6 +174,7 @@ void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 	const char *uri_arg;
 	gchar *uri;
 	GList *cur;
+	GtkTreeIter iter;
 
 	if (!tab->root) {
 		return;
@@ -203,11 +209,14 @@ void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 	gtk_list_store_clear(tab->store);
 
 	for (cur = answer->lsinfo.list; cur; cur = cur->next) {
-		library_model_append_entity(tab->store, cur->data);
+		iter = library_model_append_entity(tab->store, cur->data);
+		if (!g_strcmp0(tab->path->selected, cur->data)) {
+			library_select(tab, &iter);
+		}
 	}
 
+	library_tab_set_scroll(tab);
 	library_set_busy(tab, FALSE);
-
 }
 
 void library_idle_cb(GList *args, union mpd_cmd_answer *answer, void *data)
@@ -244,7 +253,7 @@ void library_set_listing(struct library_tab *tab, enum listing_type listing)
 	sonatina_path_bar_open_root(tab->pathbar, title, listing_icons[listing]);
 }
 
-void library_model_append_entity(GtkListStore *model, const struct mpd_entity *entity)
+GtkTreeIter library_model_append_entity(GtkListStore *model, const struct mpd_entity *entity)
 {
 	const struct mpd_directory *dir;
 	const struct mpd_song *song;
@@ -252,6 +261,7 @@ void library_model_append_entity(GtkListStore *model, const struct mpd_entity *e
 	gchar *format;
 	const char *uri = NULL;
 	enum listing_type type;
+	GtkTreeIter iter;
 
 	switch (mpd_entity_get_type(entity)) {
 	case MPD_ENTITY_TYPE_DIRECTORY:
@@ -275,11 +285,13 @@ void library_model_append_entity(GtkListStore *model, const struct mpd_entity *e
 		break;
 	}
 
-	library_model_append(model, type, name, uri);
+	iter = library_model_append(model, type, name, uri);
 	g_free(name);
+
+	return iter;
 }
 
-void library_model_append(GtkListStore *model, enum listing_type type, const char *name, const char *uri)
+GtkTreeIter library_model_append(GtkListStore *model, enum listing_type type, const char *name, const char *uri)
 {
 	GtkTreeIter iter;
 	GIcon *icon;
@@ -287,6 +299,8 @@ void library_model_append(GtkListStore *model, enum listing_type type, const cha
 	icon = g_icon_new_for_string(listing_icons[type], NULL);
 	gtk_list_store_append(model, &iter);
 	gtk_list_store_set(model, &iter, LIB_COL_ICON, icon, LIB_COL_NAME, name, LIB_COL_URI, uri, -1);
+
+	return iter;
 }
 
 void library_tab_destroy(struct sonatina_tab *tab)
@@ -313,7 +327,8 @@ struct library_path *library_path_root(enum listing_type listing)
 	path->parent = NULL;
 	path->next = NULL;
 	path->name = NULL;
-	path->selected = -1;
+	path->selected = NULL;
+	path->pos = NULL;
 
 	switch (listing) {
 	case LIBRARY_FS:
@@ -343,6 +358,10 @@ void library_path_free(struct library_path *path)
 
 	if (path->name) {
 		g_free(path->name);
+	}
+
+	if (path->selected) {
+		g_free(path->selected);
 	}
 
 	g_free(path);
@@ -476,10 +495,42 @@ gboolean library_add(struct library_tab *tab, const char *name)
 	return retval;
 }
 
+void library_tab_save_scroll(struct library_tab *tab)
+{
+	GObject *tw;
+
+	g_assert(tab != NULL);
+	g_assert(tab->path != NULL);
+
+	tw = gtk_builder_get_object(tab->ui, "tw");
+
+	if (tab->path->pos) {
+		gtk_tree_path_free(tab->path->pos);
+	}
+	gtk_tree_view_get_visible_range(GTK_TREE_VIEW(tw), &tab->path->pos, NULL);
+}
+
+void library_tab_set_scroll(struct library_tab *tab)
+{
+	GObject *tw;
+
+	g_assert(tab != NULL);
+	g_assert(tab->path != NULL);
+
+	if (!tab->path->pos) {
+		return;
+	}
+
+	tw = gtk_builder_get_object(tab->ui, "tw");
+	gtk_tree_view_scroll_to_cell(GTK_TREE_VIEW(tw), tab->path->pos, NULL, TRUE, 0.0, 0.0);
+}
+
 void library_tab_open_dir(struct library_tab *tab, const char *name)
 {
 	struct library_path *path;
 	const char *icon;
+
+	library_tab_save_scroll(tab);
 
 	path = library_path_open(tab->path, name);
 	if (!path) {
@@ -499,6 +550,8 @@ void library_tab_open_pos(struct library_tab *tab, int pos)
 {
 	struct library_path *path;
 	int i;
+
+	library_tab_save_scroll(tab);
 
 	for (path = tab->root, i = 0; path; path = path->next, i++) {
 		if (i == pos) break;
@@ -522,6 +575,11 @@ void library_clicked_cb(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn *c
 	}
 
 	gtk_tree_model_get(GTK_TREE_MODEL(tab->store), &iter, LIB_COL_NAME, &name, -1);
+	if (tab->path->selected) {
+		g_free(tab->path->selected);
+	}
+	tab->path->selected = name;
+
 	library_tab_open_dir(tab, name);
 }
 
@@ -550,7 +608,8 @@ struct library_path *library_path_open(struct library_path *parent, const char *
 	path->parent = parent;
 	path->next = NULL;
 	path->name = g_strdup(name);
-	path->selected = -1;
+	path->selected = NULL;
+	path->pos = NULL;
 
 	if (!path) {
 		return NULL;
@@ -666,6 +725,7 @@ void library_selection_changed(GtkTreeSelection *selection, gpointer data)
 			gtk_widget_insert_action_group(GTK_WIDGET(tw), "library-selected-fs", G_ACTION_GROUP(actions));
 		}
 	} else {
+		/* nothing selected */
 		gtk_widget_insert_action_group(GTK_WIDGET(tw), "library-selected", NULL);
 		gtk_widget_insert_action_group(GTK_WIDGET(tw), "library-selected-fs", NULL);
 	}
@@ -739,5 +799,16 @@ void library_set_busy(struct library_tab *tab, gboolean busy)
 
 	spinner = gtk_builder_get_object(tab->ui, "spinner");
 	g_object_set(spinner, "active", busy, NULL);
+}
+
+void library_select(struct library_tab *tab, GtkTreeIter *iter)
+{
+	GObject *tw;
+	GtkTreeSelection *select;
+
+	tw = gtk_builder_get_object(tab->ui, "tw");
+	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(tw));
+
+	gtk_tree_selection_select_iter(select, iter);
 }
 

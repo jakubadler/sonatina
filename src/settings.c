@@ -15,6 +15,7 @@ gchar *rcfile;
 GKeyFile *rc;
 
 struct settings_entry settings[] = {
+	{ "main", "active_profile", SETTINGS_STRING, NULL, NULL, NULL },
 	{ "main", "title", SETTINGS_STRING, __("Song line 1"), NULL, NULL },
 	{ "main", "subtitle", SETTINGS_STRING, __("Song line 2"), NULL, NULL },
 	{ "playlist", "format", SETTINGS_STRING, __("Playlist entry"), NULL, NULL },
