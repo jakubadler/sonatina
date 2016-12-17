@@ -5,6 +5,7 @@
 #include "util.h"
 #include "core.h"
 #include "gui.h"
+#include "settings.h"
 
 GList *profiles;
 
@@ -112,6 +113,7 @@ gboolean sonatina_modify_profile(const char *name, const char *newname, const ch
 {
 	GList *node;
 	struct sonatina_profile *profile;
+	gchar *current;
 
 	node = sonatina_lookup_profile(name);
 
@@ -154,7 +156,13 @@ gboolean sonatina_modify_profile(const char *name, const char *newname, const ch
 
 	chooser_update();
 
-	/* TODO: reconnect if this is current profile */
+	current = sonatina_settings_get_string("main", "active_profile");
+	if (current) {
+		if (!g_strcmp0(current, profile->name)) {
+			sonatina_change_profile(profile);
+		}
+		g_free(current);
+	}
 
 	return TRUE;
 }
@@ -162,6 +170,7 @@ gboolean sonatina_modify_profile(const char *name, const char *newname, const ch
 gboolean sonatina_remove_profile(const char *name)
 {
 	GList *node;
+	gchar *current;
 
 	node = sonatina_lookup_profile(name);
 
@@ -175,7 +184,13 @@ gboolean sonatina_remove_profile(const char *name)
 
 	chooser_update();
 
-	/* TODO: disconnect if this is current profile */
+	current = sonatina_settings_get_string("main", "active_profile");
+	if (current) {
+		if (!g_strcmp0(current, name)) {
+			sonatina_change_profile(NULL);
+		}
+		g_free(current);
+	}
 
 	return TRUE;
 }

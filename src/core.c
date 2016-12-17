@@ -117,20 +117,16 @@ void sonatina_disconnect()
 	sonatina_set_labels(_("Sonatina"), _("Disconnected"));
 }
 
-gboolean sonatina_change_profile(const char *new)
+gboolean sonatina_change_profile(const struct sonatina_profile *profile)
 {
-	const struct sonatina_profile *profile;
 	union settings_value val;
-
-	profile = sonatina_get_profile(new);
-
-	if (!profile) {
-		MSG_INFO("profile '%s' doesn't exist", new);
-		return FALSE;
-	}
 
 	if (sonatina.mpdsource) {
 		sonatina_disconnect();
+	}
+
+	if (!profile) {
+		return TRUE;
 	}
 
 	MSG_INFO("changing profile to %s", profile->name);
@@ -140,6 +136,24 @@ gboolean sonatina_change_profile(const char *new)
 	}
 
 	return TRUE;
+}
+
+gboolean sonatina_change_profile_by_name(const char *new)
+{
+	const struct sonatina_profile *profile;
+
+	if (!new) {
+		return sonatina_change_profile(NULL);
+	}
+
+	profile = sonatina_get_profile(new);
+
+	if (!profile) {
+		MSG_INFO("profile '%s' doesn't exist", new);
+		return FALSE;
+	}
+
+	return sonatina_change_profile(profile);
 }
 
 void sonatina_update_song(GList *args, union mpd_cmd_answer *answer, void *data)

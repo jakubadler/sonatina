@@ -92,7 +92,7 @@ gint app_options_cb(GApplication *app, GApplicationCommandLine *cmdline, gpointe
 
 	if (g_variant_dict_lookup(dict, "profile", "s", &str)) {
 		MSG_DEBUG("--profile %s", str);
-		sonatina_change_profile(str);
+		sonatina_change_profile_by_name(str);
 		g_free(str);
 	}
 
@@ -311,7 +311,7 @@ void connect_action(GSimpleAction *action, GVariant *param, gpointer data)
 
 	profile = g_variant_get_string(param, &len);
 	if (len) {
-		if (!sonatina_change_profile(profile)) {
+		if (!sonatina_change_profile_by_name(profile)) {
 			MSG_WARNING("Invalid profile '%s'", profile);
 			return;
 		}

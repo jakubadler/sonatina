@@ -7,6 +7,7 @@
 #include "mpd/client.h"
 
 #include "client.h"
+#include "profile.h"
 
 /**
   @brief Structure holding data of a running sonatina instance.
@@ -95,10 +96,18 @@ void sonatina_disconnect();
 
 /**
   @brief Change connection profile on sonatina instance.
-  @param name Name of the profile.
+  @param profile Profile structure that should be part of sonatina's profile
+  list. If profile is NULL, just disconnect.
   @returns TRUE when profile was successfully changed.
   */
-gboolean sonatina_change_profile(const char *name);
+gboolean sonatina_change_profile(const struct sonatina_profile *profile);
+
+/**
+  @brief Change connection profile on sonatina instance.
+  @param name Name of the profile. If profile is NULL, just disconnect.
+  @returns TRUE when profile was successfully changed.
+  */
+gboolean sonatina_change_profile_by_name(const char *name);
 
 /**
   @brief Callback for MPD command currentsong. Update current song on a sonatina instance.
