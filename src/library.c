@@ -726,6 +726,7 @@ gboolean library_add_selected(struct library_tab *tab, GtkTreeSelection *selecti
 	GList *rows;
 	GList *cur;
 	gchar *name;
+	gchar *display_name;
 	gchar *uri;
 	gboolean retval = TRUE;
 
@@ -735,14 +736,18 @@ gboolean library_add_selected(struct library_tab *tab, GtkTreeSelection *selecti
 		if (!gtk_tree_model_get_iter(model, &iter, cur->data)) {
 			continue;
 		}
-		gtk_tree_model_get(model, &iter, LIB_COL_NAME, &name, LIB_COL_URI, &uri, -1);
+		gtk_tree_model_get(model, &iter, LIB_COL_DISPLAY_NAME, &display_name, LIB_COL_NAME, &name, LIB_COL_URI, &uri, -1);
 		if (uri) {
 			retval = retval && library_add(tab, uri);
-			g_free(uri);
-		} else {
+		} else if (name) {
 			retval = retval && library_add(tab, name);
+		} else {
+			retval = retval && library_add(tab, display_name);
 		}
+
+		g_free(uri);
 		g_free(name);
+		g_free(display_name);
 	}
 
 	g_list_free_full(rows, (GDestroyNotify) gtk_tree_path_free);
