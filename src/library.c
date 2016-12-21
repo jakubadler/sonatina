@@ -2,6 +2,7 @@
 
 #include <glib.h>
 #include <gtk/gtk.h>
+#include <mpd/client.h>
 
 #include "library.h"
 #include "client.h"
@@ -66,7 +67,9 @@ gboolean library_tab_init(struct sonatina_tab *tab)
 	libtab->root = NULL;
 	libtab->path = NULL;
 
-	libtab->store = gtk_list_store_new(LIB_COL_COUNT, G_TYPE_STRING, G_TYPE_ICON, G_TYPE_STRING);
+	libtab->store = gtk_list_store_new(LIB_COL_COUNT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_ICON, G_TYPE_STRING);
+	gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(libtab->store), LIB_COL_DISPLAY_NAME, GTK_SORT_ASCENDING);
+
 	tw = gtk_builder_get_object(libtab->ui, "tw");
 	library_tw_set_columns(GTK_TREE_VIEW(tw));
 	gtk_tree_view_set_model(GTK_TREE_VIEW(tw), GTK_TREE_MODEL(libtab->store));
@@ -105,7 +108,7 @@ void library_tw_set_columns(GtkTreeView *tw)
 	gtk_tree_view_append_column(GTK_TREE_VIEW(tw), column);
 
 	renderer = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes("Name", renderer, "text", LIB_COL_NAME, NULL);
+	column = gtk_tree_view_column_new_with_attributes("Name", renderer, "text", LIB_COL_DISPLAY_NAME, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(tw), column);
 }
 
@@ -138,6 +141,7 @@ void library_list_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 	GList *cur;
 	enum listing_type type;
 	GtkTreeIter iter;
+	const gchar *name;
 
 	if (!args) {
 		MSG_WARNING("irrelevant list answer received");
@@ -157,9 +161,23 @@ void library_list_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 
 	gtk_list_store_clear(tab->store);
 
-	for (cur = answer->list; cur; cur = cur->next) {
-		iter = library_model_append(tab->store, type, cur->data, NULL);
-		if (!g_strcmp0(tab->path->selected, cur->data)) {
+	for (cur = answer->list.list; cur; cur = cur->next) {
+		switch (type) {
+		case LIBRARY_GENRE:
+			name = ((struct mpd_tag_entity *) cur->data)->genre;
+			break;
+		case LIBRARY_ARTIST:
+			name = ((struct mpd_tag_entity *) cur->data)->artist;
+			break;
+		case LIBRARY_ALBUM:
+			name = ((struct mpd_tag_entity *) cur->data)->album;
+			break;
+		default:
+			name = NULL;
+			break;
+		}
+		iter = library_model_append(tab->store, type, name, NULL);
+		if (!g_strcmp0(tab->path->selected, name)) {
 			library_select(tab, &iter);
 		}
 	}
@@ -207,7 +225,7 @@ void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 	}
 
 	gtk_list_store_clear(tab->store);
-
+	
 	for (cur = answer->lsinfo.list; cur; cur = cur->next) {
 		iter = library_model_append_entity(tab->store, cur->data);
 		if (!g_strcmp0(tab->path->selected, cur->data)) {
@@ -295,10 +313,31 @@ GtkTreeIter library_model_append(GtkListStore *model, enum listing_type type, co
 {
 	GtkTreeIter iter;
 	GIcon *icon;
+	const char *display;
+
+	if (strlen(name) == 0) {
+		switch (type) {
+		case LIBRARY_GENRE:
+			display = _("Unknown genre");
+			break;
+		case LIBRARY_ARTIST:
+			display = _("Unknown artist");
+			break;
+		case LIBRARY_ALBUM:
+			display = _("Unknown album");
+			break;
+		default:
+			display = _("Unknown");
+			break;
+		}
+	} else {
+		display = name;
+		name = NULL;
+	}
 
 	icon = g_icon_new_for_string(listing_icons[type], NULL);
 	gtk_list_store_append(model, &iter);
-	gtk_list_store_set(model, &iter, LIB_COL_ICON, icon, LIB_COL_NAME, name, LIB_COL_URI, uri, -1);
+	gtk_list_store_set(model, &iter, LIB_COL_ICON, icon, LIB_COL_DISPLAY_NAME, display, LIB_COL_NAME, name, LIB_COL_URI, uri, -1);
 
 	return iter;
 }
@@ -525,7 +564,7 @@ void library_tab_set_scroll(struct library_tab *tab)
 	gtk_tree_view_scroll_to_cell(GTK_TREE_VIEW(tw), tab->path->pos, NULL, TRUE, 0.0, 0.0);
 }
 
-void library_tab_open_dir(struct library_tab *tab, const char *name)
+void library_tab_open_dir(struct library_tab *tab, const char *display_name, const char *name)
 {
 	struct library_path *path;
 	const char *icon;
@@ -542,7 +581,7 @@ void library_tab_open_dir(struct library_tab *tab, const char *name)
 	} else {
 		icon = listing_icons[path->type];
 	}
-	sonatina_path_bar_open(tab->pathbar, name, icon);
+	sonatina_path_bar_open(tab->pathbar, display_name, icon);
 	library_load(tab);
 }
 
@@ -568,19 +607,26 @@ void library_clicked_cb(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn *c
 {
 	GtkTreeIter iter;
 	gchar *name;
+	gchar *display_name;
 
 	if (!gtk_tree_model_get_iter(GTK_TREE_MODEL(tab->store), &iter, path)) {
 		MSG_WARNING("library dir item vanished");
 		return;
 	}
 
-	gtk_tree_model_get(GTK_TREE_MODEL(tab->store), &iter, LIB_COL_NAME, &name, -1);
+	gtk_tree_model_get(GTK_TREE_MODEL(tab->store), &iter, LIB_COL_NAME, &name, LIB_COL_DISPLAY_NAME, &display_name, -1);
+
+	if (!name) {
+		name = display_name;
+	}
+
 	if (tab->path->selected) {
 		g_free(tab->path->selected);
 	}
+
 	tab->path->selected = name;
 
-	library_tab_open_dir(tab, name);
+	library_tab_open_dir(tab, display_name, name);
 }
 
 struct library_path *library_path_open(struct library_path *parent, const char *name)

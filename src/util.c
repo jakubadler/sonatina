@@ -1,7 +1,11 @@
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
+
+#include <glib.h>
 
 #include "util.h"
+#include "gettext.h"
 
 #ifdef DEBUG
 int log_level = LEVEL_DEBUG;
@@ -69,3 +73,71 @@ GtkBuilder *load_tab_ui(const char *name)
 
 	return ui;
 }
+
+struct mpd_tag_entity *mpd_tag_entity_begin(const struct mpd_pair *pair)
+{
+	struct mpd_tag_entity *entity;
+
+	entity = g_malloc(sizeof(struct mpd_tag_entity));
+
+	entity->genre = NULL;
+	entity->artist = NULL;
+	entity->album = NULL;
+	entity->date = NULL;
+
+	mpd_tag_entity_feed(entity, pair);
+
+	return entity;
+}
+
+gboolean mpd_tag_entity_feed(struct mpd_tag_entity *entity, const struct mpd_pair *pair)
+{
+	g_assert(entity != NULL);
+	g_assert(pair != NULL);
+
+	if (!g_strcmp0(pair->name, "Genre")) {
+		if (!entity->genre) {
+			entity->genre = g_strdup(pair->value);
+			return TRUE;
+		}
+	} else if (!g_strcmp0(pair->name, "Artist")) {
+		if (!entity->artist) {
+			entity->artist = g_strdup(pair->value);
+			return TRUE;
+		}
+	} else if (!g_strcmp0(pair->name, "Album")) {
+		if (!entity->album) {
+			entity->album = g_strdup(pair->value);
+			return TRUE;
+		}
+	} else if (!g_strcmp0(pair->name, "Date")) {
+		if (!entity->date) {
+			entity->date = g_strdup(pair->value);
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+void mpd_tag_entity_free(struct mpd_tag_entity *entity)
+{
+	if (entity->genre) {
+		g_free(entity->genre);
+	}
+
+	if (entity->artist) {
+		g_free(entity->artist);
+	}
+
+	if (entity->album) {
+		g_free(entity->album);
+	}
+
+	if (entity->date) {
+		g_free(entity->date);
+	}
+
+	g_free(entity);
+}
+

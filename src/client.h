@@ -4,6 +4,8 @@
 #include <glib.h>
 #include <mpd/client.h>
 
+#include "util.h"
+
 enum mpd_cmd_type {
 	MPD_CMD_NONE,
 	MPD_CMD_CURRENTSONG,
@@ -44,7 +46,10 @@ union mpd_cmd_answer {
 		struct mpd_entity *entity;
 		GList *list;
 	} lsinfo; /* MPD_CMD_LSINFO */
-	GList *list; /* MPD_CMD_LIST */
+	struct {
+		struct mpd_tag_entity *entity;
+		GList *list;
+	} list; /* MPD_CMD_LIST */
 	int idle; /* MPD_CMD_IDLE */
 	gboolean ok;
 };

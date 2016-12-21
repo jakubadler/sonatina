@@ -170,7 +170,8 @@ struct mpd_cmd *mpd_cmd_new(enum mpd_cmd_type type)
 	case MPD_CMD_LIST:
 		cmd->parse_pair = parse_pair_list;
 		cmd->process = cmd_process_list;
-		cmd->answer.list = NULL;
+		cmd->answer.list.entity = NULL;
+		cmd->answer.list.list = NULL;
 		break;
 	default:
 		break;
@@ -181,8 +182,6 @@ struct mpd_cmd *mpd_cmd_new(enum mpd_cmd_type type)
 
 void mpd_cmd_free(struct mpd_cmd *cmd)
 {
-	GList *cur;
-
 	if (!cmd) {
 		return;
 	}
@@ -199,28 +198,19 @@ void mpd_cmd_free(struct mpd_cmd *cmd)
 		}
 		break;
 	case MPD_CMD_PLINFO:
-		for (cur = cmd->answer.plinfo.list; cur; cur = cur->next) {
-			mpd_song_free(cur->data);
-		}
-		g_list_free(cmd->answer.plinfo.list);
+		g_list_free_full(cmd->answer.plinfo.list, (GDestroyNotify) mpd_song_free);
 		break;
 	case MPD_CMD_LSINFO:
-		for (cur = cmd->answer.lsinfo.list; cur; cur = cur->next) {
-			mpd_entity_free(cur->data);
-		}
-		g_list_free(cmd->answer.lsinfo.list);
+		g_list_free_full(cmd->answer.lsinfo.list, (GDestroyNotify) mpd_entity_free);
 		break;
 	case MPD_CMD_LIST:
-		g_list_free_full(cmd->answer.list, g_free);
+		g_list_free_full(cmd->answer.list.list, (GDestroyNotify) mpd_tag_entity_free);
 		break;
 	default:
 		break;
 	}
 
-	for (cur = cmd->args; cur; cur = cur->next) {
-		g_free(cur->data);
-	}
-	g_list_free(cmd->args);
+	g_list_free_full(cmd->args, g_free);
 
 	g_free(cmd);
 }
@@ -258,7 +248,10 @@ void cmd_process_lsinfo(union mpd_cmd_answer *answer)
 
 void cmd_process_list(union mpd_cmd_answer *answer)
 {
-	answer->list = g_list_reverse(answer->list);
+	if (answer->list.entity) {
+		answer->list.list = g_list_prepend(answer->list.list, answer->list.entity);
+	}
+	answer->list.list = g_list_reverse(answer->list.list);
 }
 
 gboolean parse_pair_status(union mpd_cmd_answer *answer, const struct mpd_pair *pair)
@@ -333,7 +326,12 @@ gboolean parse_pair_lsinfo(union mpd_cmd_answer *answer, const struct mpd_pair *
 
 gboolean parse_pair_list(union mpd_cmd_answer *answer, const struct mpd_pair *pair)
 {
-	answer->list = g_list_prepend(answer->list, g_strdup(pair->value));
+	if (!answer->list.entity) {
+		answer->list.entity = mpd_tag_entity_begin(pair);
+	} else if (!mpd_tag_entity_feed(answer->list.entity, pair)) {
+		answer->list.list = g_list_prepend(answer->list.list, answer->list.entity);
+		answer->list.entity = mpd_tag_entity_begin(pair);
+	}
 
 	return TRUE;
 }

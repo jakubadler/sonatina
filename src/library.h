@@ -51,9 +51,10 @@ struct library_tab {
   Columns of the list store
   */
 enum lib_columns {
-	LIB_COL_NAME,
-	LIB_COL_ICON,
-	LIB_COL_URI,
+	LIB_COL_DISPLAY_NAME, /* name to be displayed */
+	LIB_COL_NAME, /* actual name if it differs from display name (e.g. empty tags displayed as 'Unknown') */
+	LIB_COL_ICON, /* icon to be displayed */
+	LIB_COL_URI, /* URI if this is a mpd entity */
 	LIB_COL_COUNT
 };
 
@@ -87,9 +88,10 @@ void library_tw_set_columns(GtkTreeView *tw);
   @brief Open directory identified by name in the currently opened library tree
   node.
   @param tab Library tab.
-  @param name Name of the item to be opened.
+  @param display_name Name to be displayed on the pathbar.
+  @param name Actual ame of the item to be opened.
   */
-void library_tab_open_dir(struct library_tab *tab, const char *name);
+void library_tab_open_dir(struct library_tab *tab, const char *display_name, const char *name);
 
 /**
   @brief Save scrollbar position in current view.
