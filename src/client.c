@@ -103,8 +103,7 @@ const char *mpd_cmd_to_str(enum mpd_cmd_type cmd)
 		return "setvol";
 	case MPD_CMD_PLINFO:
 		return "playlistinfo";
-	case MPD_CMD_LIST:
-		return "list";
+	case MPD_CMD_LIST: return "list";
 	case MPD_CMD_LSINFO:
 		return "lsinfo";
 	case MPD_CMD_FIND:
@@ -121,6 +120,14 @@ const char *mpd_cmd_to_str(enum mpd_cmd_type cmd)
 		return "delete";
 	case MPD_CMD_DELETEID:
 		return "deleteid";
+	case MPD_CMD_LISTPL:
+		return "listplaylist";
+	case MPD_CMD_LISTPLINFO:
+		return "listplaylistinfo";
+	case MPD_CMD_LISTPLS:
+		return "listplaylists";
+	case MPD_CMD_LOAD:
+		return "load";
 	default:
 		return NULL;
 	}
@@ -162,6 +169,9 @@ struct mpd_cmd *mpd_cmd_new(enum mpd_cmd_type type)
 		break;
 	case MPD_CMD_LSINFO:
 	case MPD_CMD_FIND:
+	case MPD_CMD_LISTPL:
+	case MPD_CMD_LISTPLINFO:
+	case MPD_CMD_LISTPLS:
 		cmd->parse_pair = parse_pair_lsinfo;
 		cmd->process = cmd_process_lsinfo;
 		cmd->answer.lsinfo.entity = NULL;
@@ -227,6 +237,9 @@ void cmd_process_idle(union mpd_cmd_answer *answer)
 	}
 	if (answer->idle & MPD_CHANGED_PLAYER) {
 		mpd_send(sonatina.mpdsource, MPD_CMD_CURRENTSONG, NULL);
+	}
+	if (answer->idle & MPD_CHANGED_STORED_PL) {
+		mpd_send(sonatina.mpdsource, MPD_CMD_LISTPLS, NULL);
 	}
 }
 

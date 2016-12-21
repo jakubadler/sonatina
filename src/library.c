@@ -26,6 +26,8 @@ const char *listing_labels(enum listing_type type)
 	switch (type) {
 	case LIBRARY_FS:
 		return _("Filesystem");
+	case LIBRARY_PLAYLIST:
+		return _("Playlists");
 	case LIBRARY_GENRE:
 		return _("Genre");
 	case LIBRARY_ARTIST:
@@ -124,6 +126,8 @@ void library_tab_set_source(struct sonatina_tab *tab, GSource *source)
 		mpd_source_register(source, MPD_CMD_LIST, library_list_cb, tab);
 		mpd_source_register(source, MPD_CMD_LSINFO, library_lsinfo_cb, tab);
 		mpd_source_register(source, MPD_CMD_FIND, library_lsinfo_cb, tab);
+		mpd_source_register(source, MPD_CMD_LISTPLINFO, library_lsinfo_cb, tab);
+		mpd_source_register(source, MPD_CMD_LISTPLS, library_lsinfo_cb, tab);
 		mpd_source_register(source, MPD_CMD_IDLE, library_idle_cb, tab);
 		library_load(libtab);
 		gtk_widget_set_sensitive(GTK_WIDGET(selector), TRUE);
@@ -219,6 +223,8 @@ void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 		g_free(uri);
 	} else if (tab->path->type == LIBRARY_SONG) {
 		/* TODO: check if songs are from relevant album? */
+	} else if (tab->path->type == LIBRARY_PLAYLIST) {
+		/* TODO: check if this is the playlist that was expected */
 	} else {
 		MSG_WARNING("irrelevant lsinfo answer received");
 		return;
@@ -265,6 +271,8 @@ void library_set_listing(struct library_tab *tab, enum listing_type listing)
 
 	if (listing == LIBRARY_FS) {
 		title = _("Filesystem");
+	} else if (listing == LIBRARY_PLAYLIST) {
+		title = _("Playlists");
 	} else {
 		title = tab->root->name;
 	}
@@ -275,6 +283,7 @@ GtkTreeIter library_model_append_entity(GtkListStore *model, const struct mpd_en
 {
 	const struct mpd_directory *dir;
 	const struct mpd_song *song;
+	const struct mpd_playlist *pl;
 	gchar *name;
 	gchar *format;
 	const char *uri = NULL;
@@ -296,6 +305,12 @@ GtkTreeIter library_model_append_entity(GtkListStore *model, const struct mpd_en
 		uri = mpd_song_get_uri(song);
 		MSG_DEBUG("library_model_append_entity(): format '%s', name '%s', uri: %s", format, name, uri);
 		g_free(format);
+		break;
+	case MPD_ENTITY_TYPE_PLAYLIST:
+		type = LIBRARY_PLAYLIST;
+		pl = mpd_entity_get_playlist(entity);
+		uri = mpd_playlist_get_path(pl);
+		name = g_path_get_basename(uri);
 		break;
 	default:
 		type = LIBRARY_FS;
@@ -435,6 +450,10 @@ gboolean library_load(struct library_tab *tab)
 		retval = mpd_send(tab->mpdsource, MPD_CMD_LSINFO, uri, NULL);
 		g_free(uri);
 		break;
+	case LIBRARY_PLAYLIST:
+		MSG_INFO("opening stored playlists list");
+		retval = mpd_send(tab->mpdsource, MPD_CMD_LISTPLS, NULL);
+		break;
 	case LIBRARY_GENRE:
 		MSG_INFO("opening genre list");
 		retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "genre", NULL);
@@ -466,7 +485,11 @@ gboolean library_load(struct library_tab *tab)
 		break;
 	case LIBRARY_SONG:
 		MSG_INFO("opening song list");
-		retval = mpd_send(tab->mpdsource, MPD_CMD_FIND, "album", tab->path->name, NULL);
+		if (tab->path->parent && tab->path->parent->type == LIBRARY_PLAYLIST) {
+			retval = mpd_send(tab->mpdsource, MPD_CMD_LISTPLINFO, tab->path->name, NULL);
+		} else {
+			retval = mpd_send(tab->mpdsource, MPD_CMD_FIND, "album", tab->path->name, NULL);
+		}
 		break;
 	default:
 		retval = FALSE;
@@ -491,6 +514,10 @@ gboolean library_add(struct library_tab *tab, const char *name)
 		retval = mpd_send(tab->mpdsource, MPD_CMD_ADD, name, NULL);
 		g_free(parent_uri);
 		g_string_free(uri, TRUE);
+		break;
+	case LIBRARY_PLAYLIST:
+		MSG_INFO("adding playlist %s", name);
+		retval = mpd_send(tab->mpdsource, MPD_CMD_LOAD, name, NULL);
 		break;
 	case LIBRARY_GENRE:
 		MSG_INFO("adding genre %s", name);
@@ -641,6 +668,8 @@ struct library_path *library_path_open(struct library_path *parent, const char *
 
 	if (parent->type == LIBRARY_FS) {
 		type = LIBRARY_FS;
+	} else if (parent->type == LIBRARY_PLAYLIST) {
+		type = LIBRARY_SONG;
 	} else {
 		type = parent->type + 1;
 	}
