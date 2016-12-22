@@ -128,6 +128,8 @@ const char *mpd_cmd_to_str(enum mpd_cmd_type cmd)
 		return "listplaylists";
 	case MPD_CMD_LOAD:
 		return "load";
+	case MPD_CMD_RM:
+		return "rm";
 	default:
 		return NULL;
 	}

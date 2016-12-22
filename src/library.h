@@ -239,13 +239,12 @@ gchar *library_path_get_uri(const struct library_path *root, const struct librar
 GtkWidget *library_selector_menu(struct library_tab *tab);
 
 /**
-  @brief Iterate over all items in selection and call @a library_tab() to
-  request adding them to playlist.
+  @brief Iterate over all items in selection and call a function for every selected row.
   @param tab Library tab.
-  @param selection Selection on library TreeView.
+  @param row_func
   @return TRUE if all commands were successfully sent.
   */
-gboolean library_add_selected(struct library_tab *tab, GtkTreeSelection *selection);
+gboolean library_process_selected(struct library_tab *tab, gboolean (*row_func)(struct library_tab *, const char *));
 
 void library_selection_changed(GtkTreeSelection *selection, gpointer data);
 
@@ -263,6 +262,8 @@ void library_add_action(GSimpleAction *action, GVariant *param, gpointer data);
 void library_replace_action(GSimpleAction *action, GVariant *param, gpointer data);
 
 void library_update_action(GSimpleAction *action, GVariant *param, gpointer data);
+
+void library_delete_action(GSimpleAction *action, GVariant *param, gpointer data);
 
 void library_set_busy(struct library_tab *tab, gboolean busy);
 

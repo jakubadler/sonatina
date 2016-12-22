@@ -52,6 +52,10 @@ static GActionEntry library_selected_fs_actions[] = {
 	{ "update", library_update_action, NULL, NULL, NULL }
 };
 
+static GActionEntry library_selected_pl_actions[] = {
+	{ "delete", library_delete_action, NULL, NULL, NULL }
+};
+
 gboolean library_tab_init(struct sonatina_tab *tab)
 {
 	struct library_tab *libtab = (struct library_tab *) tab;
@@ -388,6 +392,9 @@ struct library_path *library_path_root(enum listing_type listing)
 	case LIBRARY_FS:
 		path->name = g_strdup("");
 		break;
+	case LIBRARY_PLAYLIST:
+		path->name = g_strdup(_("Playlists"));
+		break;
 	case LIBRARY_GENRE:
 		path->name = g_strdup(_("Genre"));
 		break;
@@ -433,8 +440,6 @@ void library_path_free_all(struct library_path *root)
 		library_path_free(path->parent);
 	}
 }
-
-/* TODO: These two functions are very similar and could share some code. */
 
 gboolean library_load(struct library_tab *tab)
 {
@@ -748,8 +753,10 @@ GtkWidget *library_selector_menu(struct library_tab *tab)
 	return menu;
 }
 
-gboolean library_add_selected(struct library_tab *tab, GtkTreeSelection *selection)
+gboolean library_process_selected(struct library_tab *tab, gboolean (*row_func)(struct library_tab *, const char *))
 {
+	GObject *tw;
+	GtkTreeSelection *selection;
 	GtkTreeModel *model;
 	GtkTreeIter iter;
 	GList *rows;
@@ -759,6 +766,8 @@ gboolean library_add_selected(struct library_tab *tab, GtkTreeSelection *selecti
 	gchar *uri;
 	gboolean retval = TRUE;
 
+	tw = gtk_builder_get_object(tab->ui, "tw");
+	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tw));
 	rows = gtk_tree_selection_get_selected_rows(selection, &model);
 
 	for (cur = rows; cur; cur = cur->next) {
@@ -767,11 +776,11 @@ gboolean library_add_selected(struct library_tab *tab, GtkTreeSelection *selecti
 		}
 		gtk_tree_model_get(model, &iter, LIB_COL_DISPLAY_NAME, &display_name, LIB_COL_NAME, &name, LIB_COL_URI, &uri, -1);
 		if (uri) {
-			retval = retval && library_add(tab, uri);
+			retval = retval && row_func(tab, uri);
 		} else if (name) {
-			retval = retval && library_add(tab, name);
+			retval = retval && row_func(tab, name);
 		} else {
-			retval = retval && library_add(tab, display_name);
+			retval = retval && row_func(tab, display_name);
 		}
 
 		g_free(uri);
@@ -803,11 +812,16 @@ void library_selection_changed(GtkTreeSelection *selection, gpointer data)
 			actions = g_simple_action_group_new();
 			g_action_map_add_action_entries(G_ACTION_MAP(actions), library_selected_fs_actions, G_N_ELEMENTS(library_selected_fs_actions), tab);
 			gtk_widget_insert_action_group(GTK_WIDGET(tw), "library-selected-fs", G_ACTION_GROUP(actions));
+		} else if (tab->path->type == LIBRARY_PLAYLIST) {
+			actions = g_simple_action_group_new();
+			g_action_map_add_action_entries(G_ACTION_MAP(actions), library_selected_pl_actions, G_N_ELEMENTS(library_selected_pl_actions), tab);
+			gtk_widget_insert_action_group(GTK_WIDGET(tw), "library-selected-pl", G_ACTION_GROUP(actions));
 		}
 	} else {
 		/* nothing selected */
 		gtk_widget_insert_action_group(GTK_WIDGET(tw), "library-selected", NULL);
 		gtk_widget_insert_action_group(GTK_WIDGET(tw), "library-selected-fs", NULL);
+		gtk_widget_insert_action_group(GTK_WIDGET(tw), "library-selected-pl", NULL);
 	}
 
 	g_list_free_full(rows, (GDestroyNotify) gtk_tree_path_free);
@@ -815,31 +829,19 @@ void library_selection_changed(GtkTreeSelection *selection, gpointer data)
 
 void library_add_action(GSimpleAction *action, GVariant *param, gpointer data)
 {
-	struct library_tab *tab = (struct library_tab *) data;
-	GObject *tw;
-	GtkTreeSelection *select;
-
 	MSG_INFO("Add action activated");
 
-	tw = gtk_builder_get_object(tab->ui, "tw");
-	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(tw));
-
-	library_add_selected(tab, select);
+	library_process_selected((struct library_tab *) data, library_add);
 }
 
 void library_replace_action(GSimpleAction *action, GVariant *param, gpointer data)
 {
 	struct library_tab *tab = (struct library_tab *) data;
-	GObject *tw;
-	GtkTreeSelection *select;
 
 	MSG_INFO("Replace action activated");
 
-	tw = gtk_builder_get_object(tab->ui, "tw");
-	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(tw));
-
 	mpd_send(tab->mpdsource, MPD_CMD_CLEAR, NULL);
-	library_add_selected(tab, select);
+	library_process_selected(tab, library_add);
 }
 
 void library_update_action(GSimpleAction *action, GVariant *param, gpointer data)
@@ -871,6 +873,18 @@ void library_update_action(GSimpleAction *action, GVariant *param, gpointer data
 	}
 
 	g_list_free_full(rows, (GDestroyNotify) gtk_tree_path_free);
+}
+
+gboolean library_delete_playlist(struct library_tab *tab, const char *name)
+{
+	return mpd_send(tab->mpdsource, MPD_CMD_RM, name, NULL);
+}
+
+void library_delete_action(GSimpleAction *action, GVariant *param, gpointer data)
+{
+	MSG_INFO("Delete action activated");
+
+	library_process_selected(data, library_delete_playlist);
 }
 
 void library_set_busy(struct library_tab *tab, gboolean busy)

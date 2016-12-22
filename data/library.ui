@@ -90,6 +90,10 @@
         <attribute name="label" translatable="yes">Update selected</attribute>
         <attribute name="action">library-selected-fs.update</attribute>
       </item>
+      <item>
+        <attribute name="label" translatable="yes">Remove</attribute>
+        <attribute name="action">library-selected-pl.delete</attribute>
+      </item>
     </section>
   </menu>
 </interface>
