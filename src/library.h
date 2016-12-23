@@ -93,6 +93,7 @@ void library_tw_set_columns(GtkTreeView *tw);
   @param tab Library tab.
   @param display_name Name to be displayed on the pathbar.
   @param name Actual ame of the item to be opened.
+  @param iter Iterator to the tree model pointing at the item that should be opened.
   */
 void library_tab_open_dir(struct library_tab *tab, GtkTreeIter iter);
 
@@ -169,11 +170,10 @@ gboolean library_load(struct library_tab *tab);
 /**
   @brief Add item to current playlist.
   @param tab Library tab.
-  @param name Name of item in current library listing or URI if it's a song or
-  directory.
+  @param iter Iterator to the tree model pointing at the item that should be added.
   @returns TRUE when a command was successfully sent, FALSE otherwise.
   */
-gboolean library_add(struct library_tab *tab, const char *name);
+gboolean library_add(struct library_tab *tab, GtkTreeIter iter);
 
 /**
   @brief Create new path root.
@@ -246,10 +246,10 @@ GtkWidget *library_selector_menu(struct library_tab *tab);
 /**
   @brief Iterate over all items in selection and call a function for every selected row.
   @param tab Library tab.
-  @param row_func
+  @param row_func Function that will be called for every selected row.
   @return TRUE if all commands were successfully sent.
   */
-gboolean library_process_selected(struct library_tab *tab, gboolean (*row_func)(struct library_tab *, const char *));
+gboolean library_process_selected(struct library_tab *tab, gboolean (*row_func)(struct library_tab *, GtkTreeIter));
 
 void library_selection_changed(GtkTreeSelection *selection, gpointer data);
 

@@ -541,21 +541,33 @@ gboolean library_load(struct library_tab *tab)
 	return retval;
 }
 
-gboolean library_add(struct library_tab *tab, const char *name)
+gboolean library_add(struct library_tab *tab, GtkTreeIter iter)
 {
-	gchar *parent_uri;
-	GString *uri;
+	gchar *display_name;
+	gchar *name;
+	gchar *uri;
+	enum mpd_entity_type type;
 	gboolean retval = FALSE;
+
+	gtk_tree_model_get(GTK_TREE_MODEL(tab->store), &iter,
+			LIB_COL_DISPLAY_NAME, &display_name,
+			LIB_COL_NAME, &name,
+			LIB_COL_URI, &uri,
+			LIB_COL_TYPE, &type, -1);
+
+	if (!name) {
+		name = display_name;
+		display_name = NULL;
+	}
 
 	switch (tab->path->type) {
 	case LIBRARY_FS:
-		parent_uri = library_path_get_uri(tab->root, tab->path);
-		uri = g_string_new(parent_uri);
-		g_string_append(uri, name);
 		MSG_DEBUG("sending add %s", uri);
-		retval = mpd_send(tab->mpdsource, MPD_CMD_ADD, name, NULL);
-		g_free(parent_uri);
-		g_string_free(uri, TRUE);
+		if (type == MPD_ENTITY_TYPE_PLAYLIST) {
+			retval = mpd_send(tab->mpdsource, MPD_CMD_LOAD, uri, NULL);
+		} else {
+			retval = mpd_send(tab->mpdsource, MPD_CMD_ADD, uri, NULL);
+		}
 		break;
 	case LIBRARY_PLAYLIST:
 		MSG_INFO("adding playlist %s", name);
@@ -593,13 +605,16 @@ gboolean library_add(struct library_tab *tab, const char *name)
 	case LIBRARY_SONG:
 	case LIBRARY_PLAYLISTSONG:
 		MSG_INFO("adding song %s", name);
-		//retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "album", tab->path->name, "file", name, NULL);
-		retval = mpd_send(tab->mpdsource, MPD_CMD_ADD, name, NULL);
+		retval = mpd_send(tab->mpdsource, MPD_CMD_ADD, uri, NULL);
 		break;
 	default:
 		retval = FALSE;
 		break;
 	}
+
+	g_free(name);
+	g_free(display_name);
+	g_free(uri);
 
 	return retval;
 }
@@ -676,8 +691,7 @@ void library_tab_open_dir(struct library_tab *tab, GtkTreeIter iter)
 	sonatina_path_bar_open(tab->pathbar, display_name, icon);
 	library_load(tab);
 
-	/*g_free(name);
-	g_free(display_name);*/
+	g_free(display_name);
 }
 
 void library_tab_open_pos(struct library_tab *tab, int pos)
@@ -726,6 +740,8 @@ struct library_path *library_path_open(struct library_path *parent, const char *
 			type = LIBRARY_FS;
 		} else if (mpdtype == MPD_ENTITY_TYPE_PLAYLIST) {
 			type = LIBRARY_PLAYLISTSONG;
+		} else {
+			return NULL;
 		}
 		break;
 	case LIBRARY_PLAYLIST:
@@ -766,13 +782,13 @@ gchar *library_path_get_uri(const struct library_path *root, const struct librar
 	GString *uri;
 	const struct library_path *cur;
 
-	if (root->type != LIBRARY_FS) {
+	if (root->type > LIBRARY_GENRE) {
 		return NULL;
 	}
 
 	uri = g_string_new(NULL);
 	for (cur = root; cur && cur != path->next; cur = cur->next) {
-		if (path->type == LIBRARY_PLAYLIST) {
+		if (cur->type == LIBRARY_PLAYLIST) {
 			continue;
 		}
 		if (strlen(uri->str) > 0) {
@@ -813,7 +829,7 @@ GtkWidget *library_selector_menu(struct library_tab *tab)
 	return menu;
 }
 
-gboolean library_process_selected(struct library_tab *tab, gboolean (*row_func)(struct library_tab *, const char *))
+gboolean library_process_selected(struct library_tab *tab, gboolean (*row_func)(struct library_tab *, GtkTreeIter))
 {
 	GObject *tw;
 	GtkTreeSelection *selection;
@@ -821,9 +837,6 @@ gboolean library_process_selected(struct library_tab *tab, gboolean (*row_func)(
 	GtkTreeIter iter;
 	GList *rows;
 	GList *cur;
-	gchar *name;
-	gchar *display_name;
-	gchar *uri;
 	gboolean retval = TRUE;
 
 	tw = gtk_builder_get_object(tab->ui, "tw");
@@ -834,18 +847,7 @@ gboolean library_process_selected(struct library_tab *tab, gboolean (*row_func)(
 		if (!gtk_tree_model_get_iter(model, &iter, cur->data)) {
 			continue;
 		}
-		gtk_tree_model_get(model, &iter, LIB_COL_DISPLAY_NAME, &display_name, LIB_COL_NAME, &name, LIB_COL_URI, &uri, -1);
-		if (uri) {
-			retval = retval && row_func(tab, uri);
-		} else if (name) {
-			retval = retval && row_func(tab, name);
-		} else {
-			retval = retval && row_func(tab, display_name);
-		}
-
-		g_free(uri);
-		g_free(name);
-		g_free(display_name);
+		row_func(tab, iter);
 	}
 
 	g_list_free_full(rows, (GDestroyNotify) gtk_tree_path_free);
@@ -935,9 +937,16 @@ void library_update_action(GSimpleAction *action, GVariant *param, gpointer data
 	g_list_free_full(rows, (GDestroyNotify) gtk_tree_path_free);
 }
 
-gboolean library_delete_playlist(struct library_tab *tab, const char *name)
+gboolean library_delete_playlist(struct library_tab *tab, GtkTreeIter iter)
 {
-	return mpd_send(tab->mpdsource, MPD_CMD_RM, name, NULL);
+	gchar *uri;
+	gboolean success;
+
+	gtk_tree_model_get(GTK_TREE_MODEL(tab->store), &iter, LIB_COL_URI, &uri, -1);
+	success = mpd_send(tab->mpdsource, MPD_CMD_RM, uri, NULL);
+	g_free(uri);
+
+	return success;
 }
 
 void library_delete_action(GSimpleAction *action, GVariant *param, gpointer data)
