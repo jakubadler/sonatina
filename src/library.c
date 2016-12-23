@@ -229,6 +229,12 @@ void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 		/* TODO: check if songs are from relevant album? */
 	} else if (tab->path->type == LIBRARY_PLAYLIST) {
 		/* TODO: check if this is the playlist that was expected */
+	} else if (tab->path->type == LIBRARY_PLAYLISTSONG) {
+		uri_arg = g_list_nth_data(args, 0);
+		if (g_strcmp0(uri_arg, tab->path->name)) {
+			MSG_WARNING("irrelevant playlistinfo answer received");
+			return;
+		}
 	} else {
 		MSG_WARNING("irrelevant lsinfo answer received");
 		return;
@@ -459,6 +465,10 @@ gboolean library_load(struct library_tab *tab)
 		MSG_INFO("opening stored playlists list");
 		retval = mpd_send(tab->mpdsource, MPD_CMD_LISTPLS, NULL);
 		break;
+	case LIBRARY_PLAYLISTSONG:
+		MSG_INFO("openling playlist %s", tab->path->name);
+		retval = mpd_send(tab->mpdsource, MPD_CMD_LISTPLINFO, tab->path->name, NULL);
+		break;
 	case LIBRARY_GENRE:
 		MSG_INFO("opening genre list");
 		retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "genre", NULL);
@@ -490,11 +500,7 @@ gboolean library_load(struct library_tab *tab)
 		break;
 	case LIBRARY_SONG:
 		MSG_INFO("opening song list");
-		if (tab->path->parent && tab->path->parent->type == LIBRARY_PLAYLIST) {
-			retval = mpd_send(tab->mpdsource, MPD_CMD_LISTPLINFO, tab->path->name, NULL);
-		} else {
-			retval = mpd_send(tab->mpdsource, MPD_CMD_FIND, "album", tab->path->name, NULL);
-		}
+		retval = mpd_send(tab->mpdsource, MPD_CMD_FIND, "album", tab->path->name, NULL);
 		break;
 	default:
 		retval = FALSE;
@@ -554,6 +560,7 @@ gboolean library_add(struct library_tab *tab, const char *name)
 		}
 		break;
 	case LIBRARY_SONG:
+	case LIBRARY_PLAYLISTSONG:
 		MSG_INFO("adding song %s", name);
 		//retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "album", tab->path->name, "file", name, NULL);
 		retval = mpd_send(tab->mpdsource, MPD_CMD_ADD, name, NULL);
@@ -674,7 +681,7 @@ struct library_path *library_path_open(struct library_path *parent, const char *
 	if (parent->type == LIBRARY_FS) {
 		type = LIBRARY_FS;
 	} else if (parent->type == LIBRARY_PLAYLIST) {
-		type = LIBRARY_SONG;
+		type = LIBRARY_PLAYLISTSONG;
 	} else {
 		type = parent->type + 1;
 	}
@@ -713,6 +720,10 @@ gchar *library_path_get_uri(const struct library_path *root, const struct librar
 		return NULL;
 	}
 
+	if (path->type == LIBRARY_PLAYLISTSONG) {
+		return g_strdup(path->name);
+	}
+
 	uri = g_string_new(NULL);
 	for (cur = root; cur && cur != path->next; cur = cur->next) {
 		if (strlen(uri->str) > 0) {
@@ -741,7 +752,7 @@ GtkWidget *library_selector_menu(struct library_tab *tab)
 
 	menu = gtk_menu_new();
 
-	for (i = 0; i < LIBRARY_SONG; i++) {
+	for (i = LIBRARY_PLAYLIST; i < LIBRARY_SONG; i++) {
 		item = gtk_menu_item_new_with_label(listing_labels(i));
 		g_object_set_data(G_OBJECT(item), "listing", GINT_TO_POINTER(i));
 		g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(library_selector_activate), tab);
