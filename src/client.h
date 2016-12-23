@@ -59,7 +59,7 @@ union mpd_cmd_answer {
 	gboolean ok;
 };
 
-typedef void (*CMDCallback)(GList *args, union mpd_cmd_answer *, void *);
+typedef void (*CMDCallback)(enum mpd_cmd_type, GList *, union mpd_cmd_answer *, void *);
 
 struct mpd_cmd_cb {
 	CMDCallback cb;

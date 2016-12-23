@@ -156,7 +156,7 @@ gboolean sonatina_change_profile_by_name(const char *new)
 	return sonatina_change_profile(profile);
 }
 
-void sonatina_update_song(GList *args, union mpd_cmd_answer *answer, void *data)
+void sonatina_update_song(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer *answer, void *data)
 {
 	const struct mpd_song *song = answer->song;
 	gchar *format;
@@ -188,7 +188,7 @@ void sonatina_update_song(GList *args, union mpd_cmd_answer *answer, void *data)
 	}
 }
 
-void sonatina_update_status(GList *args, union mpd_cmd_answer *answer, void *data)
+void sonatina_update_status(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer *answer, void *data)
 {
 	const struct mpd_status *status = answer->status;
 	GObject *w;

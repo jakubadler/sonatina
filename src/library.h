@@ -116,29 +116,32 @@ void library_tab_open_pos(struct library_tab *tab, int pos);
 
 /**
   @brief Callback for list command.
+  @param cmd MPD command type.
   @param args MPD command argument list.
   @param answer Answer to command.
   @param data Pointer to library tab.
   */
-void library_list_cb(GList *args, union mpd_cmd_answer *answer, void *data);
+void library_list_cb(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer *answer, void *data);
 
 /**
   @brief Callback for lsinfo command. lsinfo is used to retrieve directory
   contents or song list.
+  @param cmd MPD command type.
   @param args MPD command argument list.
   @param answer Answer to command.
   @param data Pointer to library tab.
   */
-void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data);
+void library_lsinfo_cb(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer *answer, void *data);
 
 /**
   @brief Callback for idle command; calls @a library_load() when a
   MPD_CHANGED_DB bit is set.
+  @param cmd MPD command type.
   @param args MPD command argument list.
   @param answer Answer to command.
   @param data Pointer to library tab.
   */
-void library_idle_cb(GList *args, union mpd_cmd_answer *answer, void *data);
+void library_idle_cb(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer *answer, void *data);
 
 /**
   @brief Callback for pathbar widget's 'changed' signal.

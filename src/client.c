@@ -446,7 +446,7 @@ gboolean mpd_recv(struct mpd_source *source)
 			cmd->process(&cmd->answer);
 		}
 		for (cur = source->cbs[cmd->type]; cur; cur = cur->next) {
-			cur->cb(cmd->args, &cmd->answer, cur->data);
+			cur->cb(cmd->type, cmd->args, &cmd->answer, cur->data);
 		}
 	}
 	mpd_cmd_free(cmd);

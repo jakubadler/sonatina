@@ -143,7 +143,7 @@ void library_tab_set_source(struct sonatina_tab *tab, GSource *source)
 	}
 }
 
-void library_list_cb(GList *args, union mpd_cmd_answer *answer, void *data)
+void library_list_cb(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer *answer, void *data)
 {
 	struct library_tab *tab = (struct library_tab *) data;
 	GList *cur;
@@ -194,7 +194,7 @@ void library_list_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 	library_set_busy(tab, FALSE);
 }
 
-void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
+void library_lsinfo_cb(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer *answer, void *data)
 {
 	struct library_tab *tab = (struct library_tab *) data;
 	const char *uri_arg;
@@ -211,6 +211,10 @@ void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 	}
 
 	if (tab->root->type == LIBRARY_FS) {
+		if (cmd != MPD_CMD_LSINFO) {
+			MSG_WARNING("irrelevant answer received");
+			return;
+		}
 		uri_arg = g_list_nth_data(args, 0);
 		if (!uri_arg) {
 			uri_arg = "";
@@ -226,10 +230,24 @@ void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 		}
 		g_free(uri);
 	} else if (tab->path->type == LIBRARY_SONG) {
-		/* TODO: check if songs are from relevant album? */
+		if (cmd != MPD_CMD_FIND) {
+			MSG_WARNING("irrelevant answer received");
+			return;
+		}
+		if (g_strcmp0(g_list_nth_data(args, 1), tab->path->name)) {
+			MSG_WARNING("received answer for irrelevant album");
+			return;
+		}
 	} else if (tab->path->type == LIBRARY_PLAYLIST) {
-		/* TODO: check if this is the playlist that was expected */
+		if (cmd != MPD_CMD_LISTPLS) {
+			MSG_WARNING("irrelevant answer received while expecting listplaylists");
+			return;
+		}
 	} else if (tab->path->type == LIBRARY_PLAYLISTSONG) {
+		if (cmd != MPD_CMD_LISTPL && cmd != MPD_CMD_LISTPLINFO) {
+			MSG_WARNING("irrelevant answer received while expecting listplaylist");
+			return;
+		}
 		uri_arg = g_list_nth_data(args, 0);
 		if (g_strcmp0(uri_arg, tab->path->name)) {
 			MSG_WARNING("irrelevant playlistinfo answer received");
@@ -253,7 +271,7 @@ void library_lsinfo_cb(GList *args, union mpd_cmd_answer *answer, void *data)
 	library_set_busy(tab, FALSE);
 }
 
-void library_idle_cb(GList *args, union mpd_cmd_answer *answer, void *data)
+void library_idle_cb(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer *answer, void *data)
 {
 	struct library_tab *tab = (struct library_tab *) data;
 
@@ -678,16 +696,20 @@ struct library_path *library_path_open(struct library_path *parent, const char *
 
 	MSG_DEBUG("library_path_open(): %s", name);
 
-	if (parent->type == LIBRARY_FS) {
+	switch (parent->type) {
+	case LIBRARY_FS:
 		type = LIBRARY_FS;
-	} else if (parent->type == LIBRARY_PLAYLIST) {
+		break;
+	case LIBRARY_PLAYLIST:
 		type = LIBRARY_PLAYLISTSONG;
-	} else {
-		type = parent->type + 1;
-	}
-
-	if (type > LIBRARY_SONG) {
+		break;
+	case LIBRARY_SONG:
+	case LIBRARY_PLAYLISTSONG:
+		/* TODO: Add item to playlist instead */
 		return NULL;
+		break;
+	default:
+		type = parent->type + 1;
 	}
 
 	path = g_malloc(sizeof(struct library_path));

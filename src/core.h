@@ -111,19 +111,21 @@ gboolean sonatina_change_profile_by_name(const char *name);
 
 /**
   @brief Callback for MPD command currentsong. Update current song on a sonatina instance.
+  @param cmd MPD command type.
   @param args MPD command argument list.
   @param answer Answer to command.
   @param data Pointer to library tab.
   */
-void sonatina_update_song(GList *args, union mpd_cmd_answer *answer, void *data);
+void sonatina_update_song(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer *answer, void *data);
 
 /**
   @brief Callback for MPD command status. Update status on a sonatina instance.
+  @param cmd MPD command type.
   @param args MPD command argument list.
   @param answer Answer to command.
   @param data Pointer to library tab.
   */
-void sonatina_update_status(GList *args, union mpd_cmd_answer *answer, void *data);
+void sonatina_update_status(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer *answer, void *data);
 
 /**
   @brief Function called every second to check elapsed time and update progressbar.
