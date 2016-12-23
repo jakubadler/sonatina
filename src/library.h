@@ -57,6 +57,7 @@ enum lib_columns {
 	LIB_COL_NAME, /* actual name if it differs from display name (e.g. empty tags displayed as 'Unknown') */
 	LIB_COL_ICON, /* icon to be displayed */
 	LIB_COL_URI, /* URI if this is a mpd entity */
+	LIB_COL_TYPE, /* MPD entity type if this is a LIBRARY_FS list */
 	LIB_COL_COUNT
 };
 
@@ -224,7 +225,7 @@ GtkTreeIter library_model_append_entity(GtkListStore *model, const struct mpd_en
   @param name Name of the item.
   @returns GtkTreeIter pointing to the added item.
   */
-GtkTreeIter library_model_append(GtkListStore *model, enum listing_type type, const char *name, const char *uri);
+GtkTreeIter library_model_append(GtkListStore *model, enum listing_type type, const char *name, const char *uri, enum mpd_entity_type mpdtype);
 
 /**
   @brief Get path string for given path. This string doesn't begin with slash to

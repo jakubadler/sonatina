@@ -73,7 +73,7 @@ gboolean library_tab_init(struct sonatina_tab *tab)
 	libtab->root = NULL;
 	libtab->path = NULL;
 
-	libtab->store = gtk_list_store_new(LIB_COL_COUNT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_ICON, G_TYPE_STRING);
+	libtab->store = gtk_list_store_new(LIB_COL_COUNT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_ICON, G_TYPE_STRING, G_TYPE_INT);
 	gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(libtab->store), LIB_COL_DISPLAY_NAME, GTK_SORT_ASCENDING);
 
 	tw = gtk_builder_get_object(libtab->ui, "tw");
@@ -184,7 +184,7 @@ void library_list_cb(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer *a
 			name = NULL;
 			break;
 		}
-		iter = library_model_append(tab->store, type, name, NULL);
+		iter = library_model_append(tab->store, type, name, NULL, MPD_ENTITY_TYPE_UNKNOWN);
 		if (!g_strcmp0(tab->path->selected, name)) {
 			library_select(tab, &iter);
 		}
@@ -315,10 +315,13 @@ GtkTreeIter library_model_append_entity(GtkListStore *model, const struct mpd_en
 	gchar *name;
 	gchar *format;
 	const char *uri = NULL;
+	enum mpd_entity_type mpdtype;
 	enum listing_type type;
 	GtkTreeIter iter;
 
-	switch (mpd_entity_get_type(entity)) {
+	mpdtype = mpd_entity_get_type(entity);
+
+	switch (mpdtype) {
 	case MPD_ENTITY_TYPE_DIRECTORY:
 		type = LIBRARY_FS;
 		dir = mpd_entity_get_directory(entity);
@@ -346,13 +349,13 @@ GtkTreeIter library_model_append_entity(GtkListStore *model, const struct mpd_en
 		break;
 	}
 
-	iter = library_model_append(model, type, name, uri);
+	iter = library_model_append(model, type, name, uri, mpdtype);
 	g_free(name);
 
 	return iter;
 }
 
-GtkTreeIter library_model_append(GtkListStore *model, enum listing_type type, const char *name, const char *uri)
+GtkTreeIter library_model_append(GtkListStore *model, enum listing_type type, const char *name, const char *uri, enum mpd_entity_type mpdtype)
 {
 	GtkTreeIter iter;
 	GIcon *icon;
@@ -380,7 +383,12 @@ GtkTreeIter library_model_append(GtkListStore *model, enum listing_type type, co
 
 	icon = g_icon_new_for_string(listing_icons[type], NULL);
 	gtk_list_store_append(model, &iter);
-	gtk_list_store_set(model, &iter, LIB_COL_ICON, icon, LIB_COL_DISPLAY_NAME, display, LIB_COL_NAME, name, LIB_COL_URI, uri, -1);
+	gtk_list_store_set(model, &iter,
+			LIB_COL_ICON, icon,
+			LIB_COL_DISPLAY_NAME, display,
+			LIB_COL_NAME, name,
+			LIB_COL_URI, uri,
+			LIB_COL_TYPE, mpdtype, -1);
 
 	return iter;
 }
