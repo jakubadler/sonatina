@@ -94,7 +94,7 @@ void library_tw_set_columns(GtkTreeView *tw);
   @param display_name Name to be displayed on the pathbar.
   @param name Actual ame of the item to be opened.
   */
-void library_tab_open_dir(struct library_tab *tab, const char *display_name, const char *name);
+void library_tab_open_dir(struct library_tab *tab, GtkTreeIter iter);
 
 /**
   @brief Save scrollbar position in current view.
@@ -190,7 +190,7 @@ struct library_path *library_path_root(enum listing_type listing);
   @returns Pointer to a newly allocated path node that is successor of @a parent
   or NULL on failure.
   */
-struct library_path *library_path_open(struct library_path *path, const char *name);
+struct library_path *library_path_open(struct library_path *path, const char *name, enum mpd_entity_type mpdtype);
 
 /**
   @brief Free a single library path node created with @a library_path_root() or

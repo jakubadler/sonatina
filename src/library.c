@@ -210,9 +210,9 @@ void library_lsinfo_cb(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer 
 		return;
 	}
 
-	if (tab->root->type == LIBRARY_FS) {
+	if (tab->path->type == LIBRARY_FS) {
 		if (cmd != MPD_CMD_LSINFO) {
-			MSG_WARNING("irrelevant answer received");
+			MSG_WARNING("irrelevant answer received for LIBRARY_FS list");
 			return;
 		}
 		uri_arg = g_list_nth_data(args, 0);
@@ -231,7 +231,7 @@ void library_lsinfo_cb(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer 
 		g_free(uri);
 	} else if (tab->path->type == LIBRARY_SONG) {
 		if (cmd != MPD_CMD_FIND) {
-			MSG_WARNING("irrelevant answer received");
+			MSG_WARNING("irrelevant answer received for LIBRARY_SONG list");
 			return;
 		}
 		if (g_strcmp0(g_list_nth_data(args, 1), tab->path->name)) {
@@ -249,10 +249,13 @@ void library_lsinfo_cb(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer 
 			return;
 		}
 		uri_arg = g_list_nth_data(args, 0);
-		if (g_strcmp0(uri_arg, tab->path->name)) {
+		uri = library_path_get_uri(tab->root, tab->path);
+		if (g_strcmp0(uri_arg, uri)) {
 			MSG_WARNING("irrelevant playlistinfo answer received");
+			g_free(uri);
 			return;
 		}
+		g_free(uri);
 	} else {
 		MSG_WARNING("irrelevant lsinfo answer received");
 		return;
@@ -492,8 +495,10 @@ gboolean library_load(struct library_tab *tab)
 		retval = mpd_send(tab->mpdsource, MPD_CMD_LISTPLS, NULL);
 		break;
 	case LIBRARY_PLAYLISTSONG:
-		MSG_INFO("openling playlist %s", tab->path->name);
-		retval = mpd_send(tab->mpdsource, MPD_CMD_LISTPLINFO, tab->path->name, NULL);
+		uri = library_path_get_uri(tab->root, tab->path);
+		MSG_INFO("opening playlist '%s'", uri);
+		retval = mpd_send(tab->mpdsource, MPD_CMD_LISTPLINFO, uri, NULL);
+		g_free(uri);
 		break;
 	case LIBRARY_GENRE:
 		MSG_INFO("opening genre list");
@@ -629,25 +634,50 @@ void library_tab_set_scroll(struct library_tab *tab)
 	gtk_tree_view_scroll_to_cell(GTK_TREE_VIEW(tw), tab->path->pos, NULL, TRUE, 0.0, 0.0);
 }
 
-void library_tab_open_dir(struct library_tab *tab, const char *display_name, const char *name)
+void library_tab_open_dir(struct library_tab *tab, GtkTreeIter iter)
 {
 	struct library_path *path;
 	const char *icon;
+	gchar *name;
+	gchar *display_name;
+	enum mpd_entity_type type;
 
 	library_tab_save_scroll(tab);
 
-	path = library_path_open(tab->path, name);
+	gtk_tree_model_get(GTK_TREE_MODEL(tab->store), &iter,
+			LIB_COL_NAME, &name,
+			LIB_COL_DISPLAY_NAME, &display_name,
+			LIB_COL_TYPE, &type, -1);
+
+	if (!name) {
+		name = g_strdup(display_name);
+	}
+
+	if (tab->path->selected) {
+		g_free(tab->path->selected);
+	}
+
+	tab->path->selected = name;
+
+	path = library_path_open(tab->path, name, type);
+
 	if (!path) {
 		return;
 	}
+
 	tab->path = path;
+
 	if (path->parent) {
 		icon = listing_icons[path->parent->type];
 	} else {
 		icon = listing_icons[path->type];
 	}
+
 	sonatina_path_bar_open(tab->pathbar, display_name, icon);
 	library_load(tab);
+
+	/*g_free(name);
+	g_free(display_name);*/
 }
 
 void library_tab_open_pos(struct library_tab *tab, int pos)
@@ -671,30 +701,16 @@ void library_tab_open_pos(struct library_tab *tab, int pos)
 void library_clicked_cb(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn *col, struct library_tab *tab)
 {
 	GtkTreeIter iter;
-	gchar *name;
-	gchar *display_name;
 
 	if (!gtk_tree_model_get_iter(GTK_TREE_MODEL(tab->store), &iter, path)) {
 		MSG_WARNING("library dir item vanished");
 		return;
 	}
 
-	gtk_tree_model_get(GTK_TREE_MODEL(tab->store), &iter, LIB_COL_NAME, &name, LIB_COL_DISPLAY_NAME, &display_name, -1);
-
-	if (!name) {
-		name = display_name;
-	}
-
-	if (tab->path->selected) {
-		g_free(tab->path->selected);
-	}
-
-	tab->path->selected = name;
-
-	library_tab_open_dir(tab, display_name, name);
+	library_tab_open_dir(tab, iter);
 }
 
-struct library_path *library_path_open(struct library_path *parent, const char *name)
+struct library_path *library_path_open(struct library_path *parent, const char *name, enum mpd_entity_type mpdtype)
 {
 	struct library_path *path;
 	enum listing_type type;
@@ -706,7 +722,11 @@ struct library_path *library_path_open(struct library_path *parent, const char *
 
 	switch (parent->type) {
 	case LIBRARY_FS:
-		type = LIBRARY_FS;
+		if (mpdtype == MPD_ENTITY_TYPE_DIRECTORY) {
+			type = LIBRARY_FS;
+		} else if (mpdtype == MPD_ENTITY_TYPE_PLAYLIST) {
+			type = LIBRARY_PLAYLISTSONG;
+		}
 		break;
 	case LIBRARY_PLAYLIST:
 		type = LIBRARY_PLAYLISTSONG;
@@ -750,12 +770,11 @@ gchar *library_path_get_uri(const struct library_path *root, const struct librar
 		return NULL;
 	}
 
-	if (path->type == LIBRARY_PLAYLISTSONG) {
-		return g_strdup(path->name);
-	}
-
 	uri = g_string_new(NULL);
 	for (cur = root; cur && cur != path->next; cur = cur->next) {
+		if (path->type == LIBRARY_PLAYLIST) {
+			continue;
+		}
 		if (strlen(uri->str) > 0) {
 			g_string_append(uri, "/");
 		}
