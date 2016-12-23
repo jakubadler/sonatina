@@ -923,9 +923,13 @@ void library_delete_action(GSimpleAction *action, GVariant *param, gpointer data
 void library_set_busy(struct library_tab *tab, gboolean busy)
 {
 	GObject *spinner;
+	GObject *tw;
 
 	spinner = gtk_builder_get_object(tab->ui, "spinner");
 	g_object_set(spinner, "active", busy, NULL);
+
+	tw = gtk_builder_get_object(tab->ui, "tw");
+	gtk_widget_set_sensitive(GTK_WIDGET(tw), !busy);
 }
 
 void library_select(struct library_tab *tab, GtkTreeIter *iter)
