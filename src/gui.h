@@ -55,8 +55,8 @@ void connect_signals();
 void connect_action(GSimpleAction *action, GVariant *param, gpointer data);
 void settings_action(GSimpleAction *action, GVariant *param, gpointer data);
 void quit_action(GSimpleAction *action, GVariant *param, gpointer data);
-void disconnect_action(GSimpleAction *action, GVariant *param, gpointer data);
 void db_update_action(GSimpleAction *action, GVariant *param, gpointer data);
+void playlist_save_action(GSimpleAction *action, GVariant *param, gpointer data);
 
 /**
   @brief Set text of labels in Sonatina's header.
@@ -90,5 +90,17 @@ void chooser_changed_cb(GtkComboBox *combo, gpointer data);
 void profile_entry_cb(GtkEntry *w, gpointer data);
 void add_profile_cb(GtkButton *button, gpointer data);
 void remove_profile_cb(GtkButton *button, gpointer data);
+
+/**
+  @brief Show a dialog with one entry field with label. After text is entered
+  and confirmed, it calls a defined action on the application with the entered
+  text as a parameter.
+  @param action Name of an action that takes one string parameter.
+  @param title Title of the dialog window.
+  @param label_text Label that will be displayed before the entry with ': '
+  appended.
+  @param entry_text Default text for the entry.
+  */
+void entry_dialog(const char *action, const char *title, const char *label_text, const char *entry_text);
 
 #endif

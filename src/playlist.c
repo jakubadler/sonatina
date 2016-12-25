@@ -13,7 +13,7 @@ static GActionEntry playlist_selected_actions[] = {
 };
 
 static GActionEntry playlist_actions[] = {
-	{ "clear", playlist_clear_action, NULL, NULL, NULL }
+	{ "clear", playlist_clear_action, NULL, NULL, NULL },
 };
 
 gboolean pl_tab_init(struct sonatina_tab *tab)
@@ -299,4 +299,5 @@ void playlist_clear_action(GSimpleAction *action, GVariant *param, gpointer data
 
 	mpd_send(tab->mpdsource, MPD_CMD_CLEAR, NULL);
 }
+
 

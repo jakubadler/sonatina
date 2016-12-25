@@ -130,6 +130,8 @@ const char *mpd_cmd_to_str(enum mpd_cmd_type cmd)
 		return "load";
 	case MPD_CMD_RM:
 		return "rm";
+	case MPD_CMD_SAVE:
+		return "save";
 	default:
 		return NULL;
 	}

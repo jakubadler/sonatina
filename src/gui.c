@@ -17,10 +17,9 @@
 static GActionEntry app_entries[] = {
 	{ "dbupdate", db_update_action, NULL, NULL, NULL },
 	{ "connect", connect_action, "s", "\"\"", connect_action },
-
-	{ "disconnect", disconnect_action, NULL, NULL, NULL },
 	{ "settings", settings_action, NULL, NULL, NULL },
-	{ "quit", quit_action, NULL, NULL, NULL }
+	{ "quit", quit_action, NULL, NULL, NULL },
+	{ "save", playlist_save_action, "s", NULL, NULL }
 };
 
 GtkBuilder *settings_ui = NULL;
@@ -336,17 +335,27 @@ void quit_action(GSimpleAction *action, GVariant *param, gpointer data)
 	g_application_quit(G_APPLICATION(data));
 }
 
-void disconnect_action(GSimpleAction *action, GVariant *param, gpointer data)
-{
-	sonatina_disconnect();
-}
-
 void db_update_action(GSimpleAction *action, GVariant *param, gpointer data)
 {
 	MSG_INFO("Update action activated");
 
 	if (sonatina.mpdsource) {
 		mpd_send(sonatina.mpdsource, MPD_CMD_UPDATE, NULL);
+	}
+}
+
+void playlist_save_action(GSimpleAction *action, GVariant *param, gpointer data)
+{
+	const gchar *name;
+	gsize len;
+
+	MSG_INFO("Save action activated");
+
+	name = g_variant_get_string(param, &len);
+	if (len) {
+		mpd_send(sonatina.mpdsource, MPD_CMD_SAVE, name, NULL);
+	} else {
+		entry_dialog("save", _("Save playlist"), _("Playlist name"), _("New playlist"));
 	}
 }
 
@@ -626,3 +635,64 @@ void remove_profile_cb(GtkButton *button, gpointer data)
 	sonatina_remove_profile(name);
 }
 
+void entry_dialog_response(GtkDialog *dialog, gint response, GtkEntry *entry)
+{
+	const gchar *name;
+	gchar *action;
+	GApplication *app;
+
+	MSG_DEBUG("entry_dialog_response()");
+
+	app = g_application_get_default();
+	g_assert(app != NULL);
+
+	action = g_object_get_data(G_OBJECT(dialog), "action");
+
+	if (response == GTK_RESPONSE_OK) {
+		MSG_DEBUG("response OK");
+		name = gtk_entry_get_text(entry);
+		g_action_group_activate_action(G_ACTION_GROUP(app), action, g_variant_new("s", name));
+	}
+
+	g_free(action);
+	gtk_widget_destroy(GTK_WIDGET(dialog));
+}
+
+void entry_dialog(const char *action, const char *title, const char *label_title, const char *entry_text)
+{
+	GObject *win;
+	GtkWidget *dialog;
+	GtkWidget *okbutton;
+	GtkWidget *box;
+	GtkWidget *label;
+	gchar *label_text;
+	GtkWidget *entry;
+
+	win = gtk_builder_get_object(sonatina.gui, "window");
+
+	dialog = gtk_dialog_new_with_buttons(title, GTK_WINDOW(win),
+			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+			_("Cancel"), GTK_RESPONSE_REJECT,
+			_("OK"), GTK_RESPONSE_OK,
+			NULL);
+	box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+	label_text = g_strdup_printf(_("%s: "), label_title);
+	label = gtk_label_new(label_text);
+	g_free(label_text);
+	entry = gtk_entry_new();
+	gtk_entry_set_text(GTK_ENTRY(entry), entry_text);
+	g_object_set_data(G_OBJECT(dialog), "action", g_strdup(action));
+	g_signal_connect(dialog, "response", G_CALLBACK(entry_dialog_response), entry);
+
+	g_object_set(G_OBJECT(label), "margin", WIDGET_MARGIN, NULL);
+	g_object_set(G_OBJECT(entry), "margin", WIDGET_MARGIN, NULL);
+	gtk_box_pack_start(GTK_BOX(box), GTK_WIDGET(label), FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(box), GTK_WIDGET(entry), FALSE, FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), box);
+
+	gtk_window_set_focus(GTK_WINDOW(dialog), NULL);
+	okbutton = gtk_dialog_get_widget_for_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
+	gtk_widget_set_can_default(okbutton, TRUE);
+	gtk_window_set_default(GTK_WINDOW(dialog), okbutton);
+	gtk_widget_show_all(dialog);
+}
