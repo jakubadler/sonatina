@@ -3,6 +3,9 @@
 
 #include <gtk/gtk.h>
 
+void add_connected_entries();
+void remove_connected_entries();
+
 void app_startup_cb(GtkApplication *app, gpointer user_data);
 void app_shutdown_cb(GtkApplication *app, gpointer user_data);
 void app_activate_cb(GtkApplication *app, gpointer user_data);

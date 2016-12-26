@@ -99,15 +99,16 @@ void sonatina_disconnect()
 
 	MSG_DEBUG("sonatina_disconnect()");
 
+	for (cur = sonatina.tabs; cur; cur = cur->next) {
+		tab = cur->data;
+		tab->set_mpdsource(tab, NULL);
+	}
+
 	if (!sonatina.mpdsource) {
 		MSG_WARNING("sonatina_disconnect(): not connected");
 		return;
 	}
 
-	for (cur = sonatina.tabs; cur; cur = cur->next) {
-		tab = cur->data;
-		tab->set_mpdsource(tab, NULL);
-	}
 	mpd_send(sonatina.mpdsource, MPD_CMD_CLOSE, NULL);
 	mpd_source_close(sonatina.mpdsource);
 
@@ -115,6 +116,7 @@ void sonatina_disconnect()
 	sonatina.cur = -1;
 
 	sonatina_set_labels(_("Sonatina"), _("Disconnected"));
+	remove_connected_entries();
 }
 
 gboolean sonatina_change_profile(const struct sonatina_profile *profile)
@@ -134,6 +136,8 @@ gboolean sonatina_change_profile(const struct sonatina_profile *profile)
 		val.string = profile->name;
 		sonatina_settings_set("main", "active_profile", val);
 	}
+
+	add_connected_entries();
 
 	return TRUE;
 }

@@ -15,14 +15,40 @@
 #define WIDGET_MARGIN 4
 
 static GActionEntry app_entries[] = {
-	{ "dbupdate", db_update_action, NULL, NULL, NULL },
 	{ "connect", connect_action, "s", "\"\"", connect_action },
 	{ "settings", settings_action, NULL, NULL, NULL },
 	{ "quit", quit_action, NULL, NULL, NULL },
-	{ "save", playlist_save_action, "s", NULL, NULL }
+};
+
+static GActionEntry app_connected_entries[] = {
+	{ "dbupdate", db_update_action, NULL, NULL, NULL },
+	{ "save", playlist_save_action, "s", NULL, NULL },
 };
 
 GtkBuilder *settings_ui = NULL;
+
+void add_connected_entries()
+{
+	GApplication *app;
+
+	app = g_application_get_default();
+	g_assert(app != NULL);
+
+	g_action_map_add_action_entries(G_ACTION_MAP(app), app_connected_entries, G_N_ELEMENTS(app_connected_entries), app);
+}
+
+void remove_connected_entries()
+{
+	GApplication *app;
+	size_t i;
+
+	app = g_application_get_default();
+	g_assert(app != NULL);
+
+	for (i = 0; i < G_N_ELEMENTS(app_connected_entries); i++) {
+		g_action_map_remove_action(G_ACTION_MAP(app), app_connected_entries[i].name);
+	}
+}
 
 void app_startup_cb(GtkApplication *app, gpointer user_data)
 {
@@ -91,7 +117,7 @@ gint app_options_cb(GApplication *app, GApplicationCommandLine *cmdline, gpointe
 
 	if (g_variant_dict_lookup(dict, "profile", "s", &str)) {
 		MSG_DEBUG("--profile %s", str);
-		sonatina_change_profile_by_name(str);
+		g_action_group_activate_action(G_ACTION_GROUP(app), "connect", g_variant_new("s", str));
 		g_free(str);
 	}
 
