@@ -215,6 +215,10 @@ void mpd_cmd_free(struct mpd_cmd *cmd)
 		g_list_free_full(cmd->answer.plinfo.list, (GDestroyNotify) mpd_song_free);
 		break;
 	case MPD_CMD_LSINFO:
+	case MPD_CMD_FIND:
+	case MPD_CMD_LISTPL:
+	case MPD_CMD_LISTPLINFO:
+	case MPD_CMD_LISTPLS:
 		g_list_free_full(cmd->answer.lsinfo.list, (GDestroyNotify) mpd_entity_free);
 		break;
 	case MPD_CMD_LIST:

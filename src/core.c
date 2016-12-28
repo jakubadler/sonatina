@@ -28,11 +28,11 @@ void sonatina_init()
 
 	sonatina_profiles_load();
 
-	sonatina.elapsed = 0;
+	sonatina.elapsed_ms = 0;
 	sonatina.total = 0;
 	sonatina.counter = g_timer_new();
 	g_timer_stop(sonatina.counter);
-	g_timeout_add_seconds(1, counter_cb, NULL);
+	g_timeout_add(200, counter_cb, NULL);
 
 	sonatina.cur = -1;
 
@@ -47,17 +47,10 @@ void sonatina_init()
 
 void sonatina_destroy()
 {
-	GObject *w;
-
 	MSG_DEBUG("sonatina_destroy()");
 
 	sonatina_settings_save();
 	sonatina_profiles_save();
-
-	w = gtk_builder_get_object(sonatina.gui, "window");
-	gtk_widget_destroy(GTK_WIDGET(w));
-
-	g_timer_destroy(sonatina.counter);
 }
 
 gboolean sonatina_connect(const char *host, int port)
@@ -114,6 +107,7 @@ void sonatina_disconnect()
 
 	sonatina.mpdsource = NULL;
 	sonatina.cur = -1;
+	g_timer_stop(sonatina.counter);
 
 	sonatina_set_labels(_("Sonatina"), _("Disconnected"));
 	remove_connected_entries();
@@ -217,7 +211,7 @@ void sonatina_update_status(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_an
 	}
 
 	/* elapsed time */
-	sonatina.elapsed = mpd_status_get_elapsed_time(status);
+	sonatina.elapsed_ms = mpd_status_get_elapsed_ms(status);
 	sonatina.total = mpd_status_get_total_time(status);
 	g_timer_start(sonatina.counter);
 	g_timer_stop(sonatina.counter);
@@ -254,17 +248,17 @@ gboolean counter_cb(gpointer data)
 	GObject *w;
 	gchar *str;
 	gdouble fraction;
-	int elapsed;
+	int elapsed_ms;
 
-	elapsed = sonatina.elapsed + g_timer_elapsed(sonatina.counter, NULL);
+	elapsed_ms = sonatina.elapsed_ms + g_timer_elapsed(sonatina.counter, NULL)*1000.0;
 
-	if (sonatina.total <= 0 || elapsed < 0) {
+	if (sonatina.total <= 0 || elapsed_ms < 0) {
 		fraction = 0.0;
 	} else {
-		fraction = elapsed / ((double) sonatina.total);
+		fraction = elapsed_ms / (((double) sonatina.total) * 1000.0);
 	}
 	w = gtk_builder_get_object(sonatina.gui, "timeline");
-	str = g_strdup_printf("%d:%.2d / %d:%.2d", elapsed/60, elapsed%60, sonatina.total/60, sonatina.total%60);
+	str = g_strdup_printf("%d:%.2d / %d:%.2d", (elapsed_ms/1000)/60, (elapsed_ms/1000)%60, sonatina.total/60, sonatina.total%60);
 	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(w), fraction);
 	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(w), str);
 	g_free(str);

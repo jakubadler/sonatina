@@ -392,6 +392,7 @@ GtkTreeIter library_model_append(GtkListStore *model, enum listing_type type, co
 			LIB_COL_NAME, name,
 			LIB_COL_URI, uri,
 			LIB_COL_TYPE, mpdtype, -1);
+	g_object_unref(icon);
 
 	return iter;
 }
@@ -401,9 +402,11 @@ void library_tab_destroy(struct sonatina_tab *tab)
 	struct library_tab *libtab = (struct library_tab *) tab;
 	struct library_path *path;
 
-	g_object_unref(G_OBJECT(libtab->ui));
-	g_object_unref(G_OBJECT(libtab->store));
-	g_object_unref(G_OBJECT(libtab->pathbar));
+	gtk_widget_destroy(tab->widget);
+
+	g_object_unref(libtab->ui);
+	g_object_unref(libtab->store);
+	g_object_unref(libtab->pathbar);
 
 	for (path = libtab->root; path; path = path->next) {
 		library_path_free(path);
@@ -870,14 +873,17 @@ void library_selection_changed(GtkTreeSelection *selection, gpointer data)
 		actions = g_simple_action_group_new();
 		g_action_map_add_action_entries(G_ACTION_MAP(actions), library_selected_actions, G_N_ELEMENTS(library_selected_actions), tab);
 		gtk_widget_insert_action_group(GTK_WIDGET(tw), "library-selected", G_ACTION_GROUP(actions));
+		g_object_unref(actions);
 		if (tab->path->type == LIBRARY_FS) {
 			actions = g_simple_action_group_new();
 			g_action_map_add_action_entries(G_ACTION_MAP(actions), library_selected_fs_actions, G_N_ELEMENTS(library_selected_fs_actions), tab);
 			gtk_widget_insert_action_group(GTK_WIDGET(tw), "library-selected-fs", G_ACTION_GROUP(actions));
+			g_object_unref(actions);
 		} else if (tab->path->type == LIBRARY_PLAYLIST) {
 			actions = g_simple_action_group_new();
 			g_action_map_add_action_entries(G_ACTION_MAP(actions), library_selected_pl_actions, G_N_ELEMENTS(library_selected_pl_actions), tab);
 			gtk_widget_insert_action_group(GTK_WIDGET(tw), "library-selected-pl", G_ACTION_GROUP(actions));
+			g_object_unref(actions);
 		}
 	} else {
 		/* nothing selected */

@@ -19,7 +19,7 @@ struct sonatina_instance {
 	GList *tabs;
 
 	int cur;
-	int elapsed;
+	int elapsed_ms;
 	int total;
 	GTimer *counter;
 };

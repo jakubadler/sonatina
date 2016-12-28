@@ -129,6 +129,7 @@ void pl_tab_set_source(struct sonatina_tab *tab, GSource *source)
 		actions = g_simple_action_group_new();
 		g_action_map_add_action_entries(G_ACTION_MAP(actions), playlist_actions, G_N_ELEMENTS(playlist_actions), pltab);
 		gtk_widget_insert_action_group(GTK_WIDGET(tw), "playlist", G_ACTION_GROUP(actions));
+		g_object_unref(actions);
 	} else {
 		gtk_list_store_clear(pltab->store);
 		gtk_widget_insert_action_group(GTK_WIDGET(tw), "playlist", NULL);
@@ -140,9 +141,12 @@ void pl_tab_destroy(struct sonatina_tab *tab)
 {
 	struct pl_tab *pltab = (struct pl_tab *) tab;
 
-	g_object_unref(G_OBJECT(pltab->ui));
+	gtk_widget_destroy(tab->widget);
+
 	g_strfreev(pltab->columns);
 	gtk_list_store_clear(pltab->store);
+	g_object_unref(pltab->store);
+	g_object_unref(pltab->ui);
 }
 
 void pl_set_active(struct pl_tab *pl, int pos_req)
@@ -254,6 +258,7 @@ void pl_selection_changed(GtkTreeSelection *selection, gpointer data)
 		actions = g_simple_action_group_new();
 		g_action_map_add_action_entries(G_ACTION_MAP(actions), playlist_selected_actions, G_N_ELEMENTS(playlist_selected_actions), tab);
 		gtk_widget_insert_action_group(GTK_WIDGET(tw), "playlist-selected", G_ACTION_GROUP(actions));
+		g_object_unref(actions);
 	} else {
 		gtk_widget_insert_action_group(GTK_WIDGET(tw), "playlist-selected", NULL);
 	}

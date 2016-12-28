@@ -57,12 +57,10 @@ void app_startup_cb(GtkApplication *app, gpointer user_data)
 
 	MSG_DEBUG("app_startup_cb()");
 
-	sonatina.gui = gtk_builder_new();
-	gtk_builder_add_from_file(sonatina.gui, UIFILE, NULL);
+	sonatina.gui = gtk_builder_new_from_file(UIFILE);
 
 	if (!settings_ui) {
-		settings_ui = gtk_builder_new();
-		gtk_builder_add_from_file(settings_ui, SETTINGS_UIFILE, NULL);
+		settings_ui = gtk_builder_new_from_file(SETTINGS_UIFILE);
 	}
 
 	sonatina_init();
@@ -73,7 +71,6 @@ void app_startup_cb(GtkApplication *app, gpointer user_data)
 
 	connect_signals();
 	prepare_settings_dialog();
-
 
 	/* keep application running after main window is closed */
 	g_application_hold(G_APPLICATION(app));
@@ -86,9 +83,22 @@ void app_startup_cb(GtkApplication *app, gpointer user_data)
 
 void app_shutdown_cb(GtkApplication *app, gpointer user_data)
 {
+	GObject *w;
+
 	MSG_DEBUG("app_shutdown_cb()");
+
 	sonatina_disconnect();
 	sonatina_destroy();
+
+	w = gtk_builder_get_object(sonatina.gui, "window");
+	gtk_widget_destroy(GTK_WIDGET(w));
+
+	g_object_unref(sonatina.gui);
+	g_timer_destroy(sonatina.counter);
+
+	w = gtk_builder_get_object(settings_ui, "settings_dialog");
+	gtk_widget_destroy(GTK_WIDGET(w));
+	g_object_unref(settings_ui);
 }
 
 void app_activate_cb(GtkApplication *app, gpointer user_data)
@@ -98,7 +108,7 @@ void app_activate_cb(GtkApplication *app, gpointer user_data)
 	MSG_DEBUG("app_activate_cb()");
 
 	win = gtk_builder_get_object(sonatina.gui, "window");
-	gtk_widget_show_all(GTK_WIDGET(win));
+	gtk_widget_show(GTK_WIDGET(win));
 }
 
 gint app_options_cb(GApplication *app, GApplicationCommandLine *cmdline, gpointer user_data)
@@ -225,6 +235,7 @@ GtkWidget *sonatina_menu(GMenuModel *specific)
 	}
 
 	menuw = gtk_menu_new_from_model(G_MENU_MODEL(menu));
+	g_object_unref(menu);
 
 	return menuw;
 }
