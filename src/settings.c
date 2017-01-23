@@ -20,6 +20,7 @@ struct settings_entry settings[] = {
 	{ "main", "subtitle", SETTINGS_STRING, __("Song line 2"), NULL, NULL },
 	{ "playlist", "format", SETTINGS_STRING, __("Playlist entry"), NULL, NULL },
 	{ "library", "format", SETTINGS_STRING, __("Library entry"), NULL, NULL },
+	{ "library", "icon_size", SETTINGS_NUM, __("Icon size"), NULL, NULL },
 	{ NULL, NULL, SETTINGS_UNKNOWN, NULL, NULL, NULL }
 };
 
@@ -33,6 +34,8 @@ void sonatina_settings_default(GKeyFile *rc)
 		g_key_file_set_string(rc, "playlist", "format", DEFAULT_PLAYLIST_FORMAT);
 	if (!g_key_file_get_string(rc, "library", "format", NULL))
 		g_key_file_set_string(rc, "library", "format", DEFAULT_LIBRARY_FORMAT);
+	if (!g_key_file_get_integer(rc, "library", "icon_size", NULL))
+		g_key_file_set_integer(rc, "library", "icon_size", DEFAULT_LIBRARY_ICON_SIZE);
 }
 
 gboolean sonatina_settings_load()

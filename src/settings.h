@@ -2,11 +2,13 @@
 #define SETTINGS_H
 
 #include <glib.h>
+#include <gtk/gtk.h>
 
 #define DEFAULT_MAIN_TITLE "%T"
 #define DEFAULT_MAIN_SUBTITLE "%A - %B"
 #define DEFAULT_PLAYLIST_FORMAT "%N|%T|%A"
 #define DEFAULT_LIBRARY_FORMAT "%N %T"
+#define DEFAULT_LIBRARY_ICON_SIZE (GTK_ICON_SIZE_BUTTON)
 
 enum settings_type {
 	SETTINGS_UNKNOWN,

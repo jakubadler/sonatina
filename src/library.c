@@ -14,9 +14,11 @@
 #include "gettext.h"
 
 const char *listing_icons[] = {
+	[LIBRARY_PLAYLISTSONG] = "audio-x-generic",
+	[LIBRARY_PLAYLIST] = "folder-music",
 	[LIBRARY_FS] = "folder",
-	[LIBRARY_GENRE] = "",
-	[LIBRARY_ARTIST] = "",
+	[LIBRARY_GENRE] = "user-bookmarks",
+	[LIBRARY_ARTIST] = "avatar-default",
 	[LIBRARY_ALBUM] = "media-optical",
 	[LIBRARY_SONG] = "audio-x-generic"
 };
@@ -110,6 +112,7 @@ void library_tw_set_columns(GtkTreeView *tw)
 	GtkTreeViewColumn *column;
 
 	renderer = gtk_cell_renderer_pixbuf_new();
+	g_object_set(G_OBJECT(renderer), "stock-size", sonatina_settings_get_num("library", "icon_size"), NULL);
 	column = gtk_tree_view_column_new_with_attributes("Icon", renderer, "gicon", LIB_COL_ICON, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(tw), column);
 

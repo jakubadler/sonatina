@@ -57,6 +57,8 @@ void app_startup_cb(GtkApplication *app, gpointer user_data)
 
 	MSG_DEBUG("app_startup_cb()");
 
+	gtk_icon_theme_append_search_path(gtk_icon_theme_get_default(), DATADIR "/icons");
+
 	sonatina.gui = gtk_builder_new_from_file(UIFILE);
 
 	if (!settings_ui) {
