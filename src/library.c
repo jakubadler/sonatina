@@ -161,7 +161,7 @@ void library_list_cb(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer *a
 
 	if (!g_strcmp0(args->data, "genre")) {
 		type = LIBRARY_GENRE;
-	} else if (!g_strcmp0(args->data, "artist")) {
+	} else if (!g_strcmp0(args->data, "artist") || !g_strcmp0(args->data, "albumartist")) {
 		type = LIBRARY_ARTIST;
 	} else if (!g_strcmp0(args->data, "album")) {
 		type = LIBRARY_ALBUM;
@@ -367,7 +367,7 @@ GtkTreeIter library_model_append(GtkListStore *model, enum listing_type type, co
 	GIcon *icon;
 	const char *display;
 
-	if (strlen(name) == 0) {
+	if (!name || strlen(name) == 0) {
 		switch (type) {
 		case LIBRARY_GENRE:
 			display = _("Unknown genre");
@@ -513,10 +513,10 @@ gboolean library_load(struct library_tab *tab)
 	case LIBRARY_ARTIST:
 		MSG_INFO("opening artist list");
 		if (tab->path->parent && tab->path->parent->type == LIBRARY_GENRE) {
-			retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "artist",
+			retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "albumartist",
 					"genre", tab->path->name, NULL);
 		} else {
-			retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "artist", NULL);
+			retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "albumartist", NULL);
 		}
 		break;
 	case LIBRARY_ALBUM:
@@ -524,12 +524,12 @@ gboolean library_load(struct library_tab *tab)
 		if (tab->path->parent && tab->path->parent->type == LIBRARY_ARTIST) {
 			if (tab->path->parent && tab->path->parent->type == LIBRARY_GENRE) {
 				retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "album",
-						"artist", tab->path->name,
+						"albumartist", tab->path->name,
 						"genre", tab->path->parent->name, NULL);
 			} else {
 				MSG_DEBUG("listing albums for artist %s", tab->path->name);
 				retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "album",
-						"artist", tab->path->name, NULL);
+						"albumartist", tab->path->name, NULL);
 			}
 		} else {
 			retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "album", NULL);
@@ -586,10 +586,10 @@ gboolean library_add(struct library_tab *tab, GtkTreeIter iter)
 	case LIBRARY_ARTIST:
 		MSG_INFO("adding artist %s", name);
 		if (tab->path->parent && tab->path->parent->type == LIBRARY_GENRE) {
-			retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "artist", name,
+			retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "albumartist", name,
 					"genre", tab->path->name, NULL);
 		} else {
-			retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "artist", name, NULL);
+			retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "albumartist", name, NULL);
 		}
 		break;
 	case LIBRARY_ALBUM:
@@ -597,12 +597,12 @@ gboolean library_add(struct library_tab *tab, GtkTreeIter iter)
 		if (tab->path->parent && tab->path->parent->type == LIBRARY_ARTIST) {
 			if (tab->path->parent && tab->path->parent->type == LIBRARY_GENRE) {
 				retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "album", name,
-						"artist", tab->path->name,
+						"albumartist", tab->path->name,
 						"genre", tab->path->parent->name, NULL);
 			} else {
 				MSG_DEBUG("adding album %s from artist %s", name, tab->path->name);
 				retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "album", name,
-						"artist", tab->path->name, NULL);
+						"albumartist", tab->path->name, NULL);
 			}
 		} else {
 			retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "album", name, NULL);

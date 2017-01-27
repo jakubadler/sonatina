@@ -105,6 +105,11 @@ gboolean mpd_tag_entity_feed(struct mpd_tag_entity *entity, const struct mpd_pai
 			entity->artist = g_strdup(pair->value);
 			return TRUE;
 		}
+	} else if (!g_strcmp0(pair->name, "AlbumArtist")) {
+		if (!entity->artist) {
+			entity->artist = g_strdup(pair->value);
+			return TRUE;
+		}
 	} else if (!g_strcmp0(pair->name, "Album")) {
 		if (!entity->album) {
 			entity->album = g_strdup(pair->value);
