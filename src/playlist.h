@@ -70,6 +70,7 @@ void pl_update(struct pl_tab *pl, const struct mpd_song *song);
   song.
   */
 void playlist_clicked_cb(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn *col, gpointer data);
+void playlist_row_changed_cb(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, struct pl_tab *tab);
 
 void pl_process_song(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer *answer, void *data);
 void pl_process_pl(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer *answer, void *data);

@@ -42,6 +42,7 @@ gboolean pl_tab_init(struct sonatina_tab *tab)
 		MSG_INFO("failed to load playlist tree view");
 		return FALSE;
 	}
+	g_object_set(G_OBJECT(tw), "reorderable", TRUE, NULL);
 
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tw));
 	gtk_tree_selection_set_mode(selection, GTK_SELECTION_MULTIPLE);
@@ -91,6 +92,7 @@ void pl_tab_set_format(struct pl_tab *tab, const char *format)
 	}
 
 	tab->store = gtk_list_store_newv(PL_COUNT + tab->n_columns, types);
+	g_signal_connect(G_OBJECT(tab->store), "row-changed", G_CALLBACK(playlist_row_changed_cb), tab);
 	g_free(types);
 
 	tw = gtk_builder_get_object(tab->ui, "tw");
@@ -215,6 +217,32 @@ void playlist_clicked_cb(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn *
 	gtk_tree_model_get(store, &iter, PL_POS, &pos, -1);
 
 	sonatina_play(pos);
+}
+
+void playlist_row_changed_cb(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, struct pl_tab *tab)
+{
+	gint *indices;
+	gint id, pos;
+	char from[INT_BUF_SIZE];
+	char to[INT_BUF_SIZE];
+
+	MSG_DEBUG("playlist row changed");
+
+	gtk_tree_model_get(model, iter, PL_ID, &id, PL_POS, &pos, -1);
+	indices = gtk_tree_path_get_indices(path);
+	if (!path) {
+		return;
+	}
+
+	if (pos == indices[0]) {
+		/* position not changed */
+		return;
+	}
+
+	snprintf(from, sizeof(from), "%d", id);
+	snprintf(to, sizeof(to), "%d", indices[0]);
+	MSG_DEBUG("moveid %s %s (pos %d)", from, to, pos);
+	mpd_send(tab->mpdsource, MPD_CMD_MOVEID, from, to, NULL);
 }
 
 void pl_process_song(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_answer *answer, void *data)

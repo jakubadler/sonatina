@@ -132,6 +132,8 @@ const char *mpd_cmd_to_str(enum mpd_cmd_type cmd)
 		return "rm";
 	case MPD_CMD_SAVE:
 		return "save";
+	case MPD_CMD_MOVEID:
+		return "moveid";
 	default:
 		return NULL;
 	}

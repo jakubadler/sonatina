@@ -36,6 +36,7 @@ enum mpd_cmd_type {
 	MPD_CMD_LOAD,
 	MPD_CMD_RM,
 	MPD_CMD_SAVE,
+	MPD_CMD_MOVEID,
 	MPD_CMD_COUNT
 };
 

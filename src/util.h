@@ -27,6 +27,8 @@ int printmsg(int level, const char *format, ...);
 #define MSG_ERROR(...) { printmsg(LEVEL_ERROR, __VA_ARGS__); }
 #define MSG_FATAL(...) { printmsg(LEVEL_FATAL, __VA_ARGS__); }
 
+#define INT_BUF_SIZE 24
+
 
 /**
   An entity defined by MPD tags. Depending on which fields are used, this entity
