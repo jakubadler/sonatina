@@ -268,29 +268,29 @@ gboolean counter_cb(gpointer data)
 
 void sonatina_play(int pos)
 {
-	char buf[24];
+	char buf[INT_BUF_SIZE];
 
 	if (pos < 0) {
 		mpd_send(sonatina.mpdsource, MPD_CMD_PLAY, NULL);
 	} else {
-		snprintf(buf, sizeof(buf) - 1, "%d", pos);
+		snprintf(buf, sizeof(buf), "%d", pos);
 		mpd_send(sonatina.mpdsource, MPD_CMD_PLAY, buf, NULL);
 	}
 }
 
 void sonatina_seek(int time)
 {
-	char buf[24];
+	char buf[INT_BUF_SIZE];
 
-	snprintf(buf, sizeof(buf) - 1, "%d", time);
+	snprintf(buf, sizeof(buf), "%d", time);
 	mpd_send(sonatina.mpdsource, MPD_CMD_SEEKCUR, buf, NULL);
 }
 
 void sonatina_setvol(double vol)
 {
-	char buf[24];
+	char buf[INT_BUF_SIZE];
 
-	snprintf(buf, sizeof(buf) - 1, "%d", (int) (vol * 100.0));
+	snprintf(buf, sizeof(buf), "%d", (int) (vol * 100.0));
 	mpd_send(sonatina.mpdsource, MPD_CMD_SETVOL, buf, NULL);
 }
 

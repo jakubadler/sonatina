@@ -304,7 +304,7 @@ void playlist_remove_action(GSimpleAction *action, GVariant *param, gpointer dat
 	GList *rows;
 	GList *row;
 	gint id;
-	char buf[24];
+	char buf[INT_BUF_SIZE];
 
 	MSG_INFO("Remove action activated");
 
@@ -317,7 +317,7 @@ void playlist_remove_action(GSimpleAction *action, GVariant *param, gpointer dat
 			continue;
 		}
 		gtk_tree_model_get(model, &iter, PL_ID, &id, -1);
-		sprintf(buf, "%d", id);
+		snprintf(buf, sizeof(buf), "%d", id);
 		mpd_send(tab->mpdsource, MPD_CMD_DELETEID, buf, NULL);
 	}
 
