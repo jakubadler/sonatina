@@ -23,6 +23,10 @@ static GActionEntry app_entries[] = {
 static GActionEntry app_connected_entries[] = {
 	{ "dbupdate", db_update_action, NULL, NULL, NULL },
 	{ "save", playlist_save_action, "s", NULL, NULL },
+	{ "repeat", repeat_action, NULL, "false", toggle_action_changed },
+	{ "random", random_action, NULL, "false", toggle_action_changed },
+	{ "single", single_action, NULL, "false", toggle_action_changed },
+	{ "consume", consume_action, NULL, "false", toggle_action_changed },
 };
 
 GtkBuilder *settings_ui = NULL;
@@ -396,6 +400,59 @@ void playlist_save_action(GSimpleAction *action, GVariant *param, gpointer data)
 	} else {
 		entry_dialog("save", _("Save playlist"), _("Playlist name"), _("New playlist"));
 	}
+}
+
+void repeat_action(GSimpleAction *action, GVariant *param, gpointer data)
+{
+	GVariant *state;
+	gboolean val;
+
+	MSG_INFO("Repeat action activated");
+
+	state = g_action_get_state(G_ACTION(action));
+	val = g_variant_get_boolean(state);
+	mpd_send(sonatina.mpdsource, MPD_CMD_REPEAT, mpd_bool_str(!val), NULL);
+}
+
+void toggle_action_changed(GSimpleAction *action, GVariant *state, gpointer data)
+{
+	g_simple_action_set_state(action, state);
+}
+
+void random_action(GSimpleAction *action, GVariant *param, gpointer data)
+{
+	GVariant *state;
+	gboolean val;
+
+	MSG_INFO("Random action activated");
+
+	state = g_action_get_state(G_ACTION(action));
+	val = g_variant_get_boolean(state);
+	mpd_send(sonatina.mpdsource, MPD_CMD_RANDOM, mpd_bool_str(!val), NULL);
+}
+
+void single_action(GSimpleAction *action, GVariant *param, gpointer data)
+{
+	GVariant *state;
+	gboolean val;
+
+	MSG_INFO("Random action activated");
+
+	state = g_action_get_state(G_ACTION(action));
+	val = g_variant_get_boolean(state);
+	mpd_send(sonatina.mpdsource, MPD_CMD_SINGLE, mpd_bool_str(!val), NULL);
+}
+
+void consume_action(GSimpleAction *action, GVariant *param, gpointer data)
+{
+	GVariant *state;
+	gboolean val;
+
+	MSG_INFO("Random action activated");
+
+	state = g_action_get_state(G_ACTION(action));
+	val = g_variant_get_boolean(state);
+	mpd_send(sonatina.mpdsource, MPD_CMD_CONSUME, mpd_bool_str(!val), NULL);
 }
 
 void sonatina_set_labels(const char *title, const char *subtitle)

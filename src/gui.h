@@ -60,6 +60,11 @@ void settings_action(GSimpleAction *action, GVariant *param, gpointer data);
 void quit_action(GSimpleAction *action, GVariant *param, gpointer data);
 void db_update_action(GSimpleAction *action, GVariant *param, gpointer data);
 void playlist_save_action(GSimpleAction *action, GVariant *param, gpointer data);
+void repeat_action(GSimpleAction *action, GVariant *param, gpointer data);
+void random_action(GSimpleAction *action, GVariant *param, gpointer data);
+void single_action(GSimpleAction *action, GVariant *param, gpointer data);
+void consume_action(GSimpleAction *action, GVariant *param, gpointer data);
+void toggle_action_changed(GSimpleAction *action, GVariant *state, gpointer data);
 
 /**
   @brief Set text of labels in Sonatina's header.

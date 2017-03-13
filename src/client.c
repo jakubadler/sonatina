@@ -134,6 +134,14 @@ const char *mpd_cmd_to_str(enum mpd_cmd_type cmd)
 		return "save";
 	case MPD_CMD_MOVEID:
 		return "moveid";
+	case MPD_CMD_REPEAT:
+		return "repeat";
+	case MPD_CMD_RANDOM:
+		return "random";
+	case MPD_CMD_SINGLE:
+		return "single";
+	case MPD_CMD_CONSUME:
+		return "consume";
 	default:
 		return NULL;
 	}
@@ -658,3 +666,9 @@ struct mpd_cmd_cb *mpd_cmd_cb_append(struct mpd_cmd_cb *list, CMDCallback cb, vo
 
 	return list;
 }
+
+const char *mpd_bool_str(bool value)
+{
+	return value ? "1" : "0";
+}
+

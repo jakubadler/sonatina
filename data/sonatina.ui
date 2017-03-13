@@ -275,6 +275,22 @@ audio-volume-medium-symbolic</property>
   <menu id="menu">
     <section>
       <item>
+        <attribute name="label" translatable="yes">Repeat</attribute>
+        <attribute name="action">app.repeat</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Random</attribute>
+        <attribute name="action">app.random</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Single</attribute>
+        <attribute name="action">app.single</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Consume</attribute>
+        <attribute name="action">app.consume</attribute>
+      </item>
+      <item>
         <attribute name="label" translatable="yes">Update library</attribute>
         <attribute name="action">app.dbupdate</attribute>
       </item>

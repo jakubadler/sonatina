@@ -193,6 +193,8 @@ void sonatina_update_status(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_an
 	int vol;
 	enum mpd_state state;
 	const char *mpd_err;
+	GApplication *app;
+	GAction *action;
 
 	if (!status) {
 		return;
@@ -240,6 +242,32 @@ void sonatina_update_status(enum mpd_cmd_type cmd, GList *args, union mpd_cmd_an
 	mpd_err = mpd_status_get_error(status);
 	if (mpd_err) {
 		MSG_ERROR("MPD: %s", mpd_err);
+	}
+
+	app = g_application_get_default();
+
+	if (!app) {
+		return;
+	}
+
+	action = g_action_map_lookup_action(G_ACTION_MAP(app), "repeat");
+	if (action) {
+		g_action_change_state(action, g_variant_new("b", mpd_status_get_repeat(status)));
+	}
+
+	action = g_action_map_lookup_action(G_ACTION_MAP(app), "random");
+	if (action) {
+		g_action_change_state(action, g_variant_new("b", mpd_status_get_random(status)));
+	}
+
+	action = g_action_map_lookup_action(G_ACTION_MAP(app), "single");
+	if (action) {
+		g_action_change_state(action, g_variant_new("b", mpd_status_get_single(status)));
+	}
+
+	action = g_action_map_lookup_action(G_ACTION_MAP(app), "consume");
+	if (action) {
+		g_action_change_state(action, g_variant_new("b", mpd_status_get_consume(status)));
 	}
 }
 

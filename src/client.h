@@ -37,6 +37,10 @@ enum mpd_cmd_type {
 	MPD_CMD_RM,
 	MPD_CMD_SAVE,
 	MPD_CMD_MOVEID,
+	MPD_CMD_REPEAT,
+	MPD_CMD_RANDOM,
+	MPD_CMD_SINGLE,
+	MPD_CMD_CONSUME,
 	MPD_CMD_COUNT
 };
 
@@ -227,5 +231,7 @@ gboolean mpd_send(GSource *source, enum mpd_cmd_type type, ...);
 void mpd_source_register(GSource *source, enum mpd_cmd_type cmd, CMDCallback cb, void *data);
 
 struct mpd_cmd_cb *mpd_cmd_cb_append(struct mpd_cmd_cb *list, CMDCallback cb, void *data);
+
+const char *mpd_bool_str(bool value);
 
 #endif
