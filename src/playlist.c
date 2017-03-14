@@ -14,6 +14,7 @@ static GActionEntry playlist_selected_actions[] = {
 
 static GActionEntry playlist_actions[] = {
 	{ "clear", playlist_clear_action, NULL, NULL, NULL },
+	{ "shuffle", playlist_shuffle_action, NULL, NULL, NULL },
 };
 
 gboolean pl_tab_init(struct sonatina_tab *tab)
@@ -333,4 +334,12 @@ void playlist_clear_action(GSimpleAction *action, GVariant *param, gpointer data
 	mpd_send(tab->mpdsource, MPD_CMD_CLEAR, NULL);
 }
 
+void playlist_shuffle_action(GSimpleAction *action, GVariant *param, gpointer data)
+{
+	struct pl_tab *tab = (struct pl_tab *) data;
+
+	MSG_INFO("Shuffle action activated");
+
+	mpd_send(tab->mpdsource, MPD_CMD_SHUFFLE, NULL);
+}
 

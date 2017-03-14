@@ -41,6 +41,7 @@ enum mpd_cmd_type {
 	MPD_CMD_RANDOM,
 	MPD_CMD_SINGLE,
 	MPD_CMD_CONSUME,
+	MPD_CMD_SHUFFLE,
 	MPD_CMD_COUNT
 };
 

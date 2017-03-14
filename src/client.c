@@ -142,6 +142,8 @@ const char *mpd_cmd_to_str(enum mpd_cmd_type cmd)
 		return "single";
 	case MPD_CMD_CONSUME:
 		return "consume";
+	case MPD_CMD_SHUFFLE:
+		return "shuffle";
 	default:
 		return NULL;
 	}

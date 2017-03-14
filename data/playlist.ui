@@ -35,6 +35,10 @@
         <attribute name="action">playlist.clear</attribute>
       </item>
       <item>
+        <attribute name="label" translatable="yes">Shuffle</attribute>
+        <attribute name="action">playlist.shuffle</attribute>
+      </item>
+      <item>
         <attribute name="label" translatable="yes">Save playlist</attribute>
         <attribute name="action">app.save</attribute>
         <attribute name="target"></attribute>

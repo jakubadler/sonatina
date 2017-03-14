@@ -79,5 +79,6 @@ void pl_selection_changed(GtkTreeSelection *selection, gpointer data);
 
 void playlist_remove_action(GSimpleAction *action, GVariant *param, gpointer data);
 void playlist_clear_action(GSimpleAction *action, GVariant *param, gpointer data);
+void playlist_shuffle_action(GSimpleAction *action, GVariant *param, gpointer data);
 
 #endif
