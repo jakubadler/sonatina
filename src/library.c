@@ -512,25 +512,16 @@ gboolean library_load(struct library_tab *tab)
 		break;
 	case LIBRARY_ARTIST:
 		MSG_INFO("opening artist list");
-		if (tab->path->parent && tab->path->parent->type == LIBRARY_GENRE) {
-			retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "albumartist",
-					"genre", tab->path->name, NULL);
-		} else {
-			retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "albumartist", NULL);
-		}
+		retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "albumartist", NULL);
 		break;
 	case LIBRARY_ALBUM:
 		MSG_INFO("opening album list");
 		if (tab->path->parent && tab->path->parent->type == LIBRARY_ARTIST) {
-			if (tab->path->parent && tab->path->parent->type == LIBRARY_GENRE) {
-				retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "album",
-						"albumartist", tab->path->name,
-						"genre", tab->path->parent->name, NULL);
-			} else {
-				MSG_DEBUG("listing albums for artist %s", tab->path->name);
-				retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "album",
-						"albumartist", tab->path->name, NULL);
-			}
+			MSG_DEBUG("listing albums for artist %s", tab->path->name);
+			GString *filter = mpd_create_artist_filter(tab->path->name);
+			retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "album",
+					filter->str, NULL);
+			g_string_free(filter, TRUE);
 		} else {
 			retval = mpd_send(tab->mpdsource, MPD_CMD_LIST, "album", NULL);
 		}
@@ -595,15 +586,10 @@ gboolean library_add(struct library_tab *tab, GtkTreeIter iter)
 	case LIBRARY_ALBUM:
 		MSG_INFO("adding album %s", name);
 		if (tab->path->parent && tab->path->parent->type == LIBRARY_ARTIST) {
-			if (tab->path->parent && tab->path->parent->type == LIBRARY_GENRE) {
-				retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "album", name,
-						"albumartist", tab->path->name,
-						"genre", tab->path->parent->name, NULL);
-			} else {
-				MSG_DEBUG("adding album %s from artist %s", name, tab->path->name);
-				retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "album", name,
-						"albumartist", tab->path->name, NULL);
-			}
+			MSG_DEBUG("adding album %s from artist %s", name, tab->path->name);
+			GString *filter = mpd_create_artist_album_filter(tab->path->name, name);
+			retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, filter->str, NULL);
+			g_string_free(filter, TRUE);
 		} else {
 			retval = mpd_send(tab->mpdsource, MPD_CMD_FINDADD, "album", name, NULL);
 		}

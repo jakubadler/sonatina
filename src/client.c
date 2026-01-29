@@ -674,3 +674,24 @@ const char *mpd_bool_str(bool value)
 	return value ? "1" : "0";
 }
 
+GString *mpd_create_artist_filter(const char *artist)
+{
+	GString *result = g_string_new(NULL);
+
+	// MPD in its infinite wisdom supports AND but not OR. DeMorgan to the rescue!
+	// TODO: Escape the quotes?
+	g_string_printf(result, "(!((artist != '%s') AND (albumartist != '%s')))", artist, artist);
+
+	return result;
+}
+
+GString *mpd_create_artist_album_filter(const char *artist, const char *album)
+{
+	GString *result = g_string_new(NULL);
+
+	// TODO: Reuse mpd_create_artist_filter()?
+	g_string_printf(result, "((!((artist != '%s') AND (albumartist != '%s'))) AND (album == '%s'))", artist, artist, album);
+
+	return result;
+}
+
