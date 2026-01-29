@@ -235,4 +235,7 @@ struct mpd_cmd_cb *mpd_cmd_cb_append(struct mpd_cmd_cb *list, CMDCallback cb, vo
 
 const char *mpd_bool_str(bool value);
 
+GString *mpd_create_artist_filter(const char *artist);
+GString *mpd_create_artist_album_filter(const char *artist, const char *album);
+
 #endif
